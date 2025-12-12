@@ -1,0 +1,45 @@
+<IfModule mod_rewrite.c>
+    <IfModule mod_negotiation.c>
+        Options -MultiViews -Indexes
+    </IfModule>
+
+    <Files .env>
+        Order Allow,Deny
+        Deny from all
+    </Files>
+
+    RewriteEngine On
+
+    # -----------------------------------------
+    # 🔄 REDIRECTION WWW → NON-WWW (d'abord)
+    # -----------------------------------------
+    RewriteCond %{HTTP_HOST} ^www\.sirhdj\.com$ [NC]
+    RewriteRule ^(.*)$ https://sirhdj.com/$1 [L,R=301]
+    
+    # -----------------------------------------
+    # 🔒 FORCER HTTPS (après)
+    # -----------------------------------------
+    RewriteCond %{HTTPS} !=on
+    RewriteRule ^(.*)$ https://%{HTTP_HOST}/$1 [L,R=301]
+
+
+    # Handle Authorization Header
+    RewriteCond %{HTTP:Authorization} .
+    RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+
+    # Redirect Trailing Slashes If Not A Folder...
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteCond %{REQUEST_URI} (.+)/$
+    RewriteRule ^ %1 [L,R=301]
+
+    # Handle Front Controller...
+    RewriteCond %{REQUEST_URI} !(\.css|\.js|\.png|\.jpg|\.jpeg|\.gif|robots\.txt|\.ico|\.woff|\.woff2|.ttf|\.svg)$ [NC]
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteRule ^ index.php [L]
+
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_URI} !^/public/
+    RewriteRule ^(css|assets|market_assets|images|landing|uploads|storage|installer|js|vendor|build|screenshots)/(.*)$ public/$1/$2 [L,NC]
+</IfModule>
