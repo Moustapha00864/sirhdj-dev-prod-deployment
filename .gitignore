@@ -1,0 +1,75 @@
+# =========================
+# Laravel / PHP
+# =========================
+/vendor/
+/.env
+.env.*
+.env.backup
+.env.production
+
+/.phpunit.cache
+.phpunit.result.cache
+.phpactor.json
+
+/auth.json
+
+# Storage (ne jamais versionner)
+/storage/*
+!/storage/.gitignore
+/storage/logs/
+/storage/uploads/
+/storage/framework/
+/storage/debugbar/
+/storage/*.key
+/storage/installed*.zip
+
+# =========================
+# Frontend / Node
+# =========================
+/node_modules/
+npm-debug.log
+yarn-error.log
+
+/public/build/
+/public/hot/
+/public/storage/
+/public/screenshots
+
+# =========================
+# SSR / Vite
+# =========================
+/bootstrap/ssr
+
+# =========================
+# Homestead
+# =========================
+Homestead.json
+Homestead.yaml
+
+# =========================
+# IDE / Editors
+# =========================
+/.idea/
+/.vscode/
+/.fleet/
+/.nova/
+/.zed/
+
+# =========================
+# Archives
+# =========================
+*.zip
+*.tar.gz
+
+# =========================
+# Sécurité / Config sensibles
+# =========================
+/config/app.php
+/config/verification.php
+
+/staging/
+*Permissions*
+.DS_Store
+
+public_html/*.zip
+
