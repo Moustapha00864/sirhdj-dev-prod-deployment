@@ -9,12 +9,21 @@ jobs:
   test-ssh:
     runs-on: ubuntu-latest
     steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+
+      - name: Decode SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.HOSTINGER_SSH_KEY_BASE64 }}" | base64 -d > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+
       - name: Test SSH
         uses: appleboy/ssh-action@v0.1.7
         with:
           host: ${{ secrets.HOSTINGER_STAGING_HOST }}
           username: ${{ secrets.HOSTINGER_STAGING_USER }}
-          key: ${{ secrets.HOSTINGER_SSH_KEY }}
+          key_path: ~/.ssh/id_rsa
           port: 65002
           script: |
             echo "Connexion SSH réussie sur staging"
