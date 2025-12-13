@@ -3,7 +3,7 @@ name: Test SSH Staging
 on:
   push:
     branches:
-      - develop  # le workflow s'exécutera à chaque push sur develop
+      - develop
 
 jobs:
   test-ssh:
