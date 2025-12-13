@@ -82,3 +82,4 @@ After running the seeders, you can log in with the following credentials:
 ## License
 
 The HRM React is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).// test staging
+// test GitHub Actions
