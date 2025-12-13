@@ -1,0 +1,23 @@
+name: Test CI/CD Workflow
+
+on:
+  push:
+    branches:
+      - feature-deployment
+      - dev
+      - main
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Show branch name
+        run: echo "Branch: $GITHUB_REF"
+
+      - name: Test script
+        run: |
+          echo "Hello! CI/CD workflow triggered successfully."
+          echo "This is a simple test for branch: $GITHUB_REF"
