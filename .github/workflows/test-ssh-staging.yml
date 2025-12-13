@@ -1,0 +1,20 @@
+name: Test SSH Staging
+
+on:
+  push:
+    branches:
+      - develop  # le workflow s'exécutera à chaque push sur develop
+
+jobs:
+  test-ssh:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Test SSH
+        uses: appleboy/ssh-action@v0.1.7
+        with:
+          host: ${{ secrets.HOSTINGER_STAGING_HOST }}
+          username: ${{ secrets.HOSTINGER_STAGING_USER }}
+          key: ${{ secrets.HOSTINGER_SSH_KEY }}
+          port: 65002
+          script: |
+            echo "Connexion SSH réussie sur staging"
