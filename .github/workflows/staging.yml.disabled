@@ -1,0 +1,33 @@
+name: Deploy Staging
+
+on:
+  push:
+    branches:
+      - develop
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Test SSH and deploy
+        uses: appleboy/ssh-action@v0.1.7
+        with:
+          host: ${{ secrets.HOSTINGER_STAGING_HOST }}
+          username: ${{ secrets.HOSTINGER_STAGING_USER }}
+          key: ${{ secrets.HOSTINGER_SSH_KEY }}
+          port: 65002
+          script: |
+            cd ~/domains/sirhdj.com/public_html/staging
+            git reset --hard
+            git pull origin develop
+            composer install --no-interaction --prefer-dist --optimize-autoloader
+            php artisan migrate --force
+            npm install
+            npm run build
+            php artisan config:clear
+            php artisan cache:clear
+            echo "Déploiement staging terminé"
