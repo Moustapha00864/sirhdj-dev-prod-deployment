@@ -11,8 +11,27 @@ use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
 use Carbon\Carbon;
 
+use App\Services\LeaveApprovalService;
+use App\Services\LeaveCalculationService;
+use App\Services\LeavePdfService;
+use App\Mail\LeaveSubmittedMail;
+use Illuminate\Support\Facades\Mail;
+
 class LeaveApplicationController extends Controller
 {
+    protected $approvalService;
+    protected $calculationService;
+    protected $pdfService;
+
+    public function __construct(
+        LeaveApprovalService $approvalService,
+        LeaveCalculationService $calculationService,
+        LeavePdfService $pdfService
+    ) {
+        $this->approvalService = $approvalService;
+        $this->calculationService = $calculationService;
+        $this->pdfService = $pdfService;
+    }
     public function index(Request $request)
     {
         $query = LeaveApplication::withPermissionCheck()
@@ -103,10 +122,19 @@ class LeaveApplicationController extends Controller
 
         $validated['leave_policy_id'] = $leavePolicy->id;
 
+        // Use LeaveCalculationService for precise working days
+        $validated['total_days'] = $this->calculationService->calculateWorkingDays(
+            $validated['start_date'],
+            $validated['end_date']
+        );
+
         // Validate days per application
-        if ($validated['total_days'] < $leavePolicy->min_days_per_application || 
-            $validated['total_days'] > $leavePolicy->max_days_per_application) {
-            return redirect()->back()->with('error', 
+        if (
+            $validated['total_days'] < $leavePolicy->min_days_per_application ||
+            $validated['total_days'] > $leavePolicy->max_days_per_application
+        ) {
+            return redirect()->back()->with(
+                'error',
                 __('Leave days must be between :min and :max days.', [
                     'min' => $leavePolicy->min_days_per_application,
                     'max' => $leavePolicy->max_days_per_application
@@ -137,7 +165,8 @@ class LeaveApplicationController extends Controller
 
         // Check if enough balance available
         if ($leaveBalance->remaining_days < $validated['total_days']) {
-            return redirect()->back()->with('error', 
+            return redirect()->back()->with(
+                'error',
                 __('Insufficient leave balance. Available: :available days, Requested: :requested days', [
                     'available' => $leaveBalance->remaining_days,
                     'requested' => $validated['total_days']
@@ -150,14 +179,24 @@ class LeaveApplicationController extends Controller
             $validated['attachment'] = $request->attachment;
         }
 
+        // Initialize workflow state
+        $validated['current_stage'] = 1;
+        $validated['is_completed'] = false;
+
         // Set status based on policy
         $validated['status'] = $leavePolicy->requires_approval ? 'pending' : 'approved';
 
         $leaveApplication = LeaveApplication::create($validated);
 
         // Create attendance records if auto-approved
-        if ($validated['status'] === 'approved') {
+        if ($leaveApplication->status === 'approved') {
             $leaveApplication->createAttendanceRecords();
+        } else {
+            // Send notification to Department Manager (Stage 1)
+            $department = $leaveApplication->employee->employee->department;
+            if ($department && $department->manager) {
+                Mail::to($department->manager->email)->send(new LeaveSubmittedMail($leaveApplication));
+            }
         }
 
         return redirect()->back()->with('success', __('Leave application created successfully.'));
@@ -244,32 +283,10 @@ class LeaveApplicationController extends Controller
 
         if ($leaveApplication) {
             try {
-                $leaveApplication->update([
-                    'status' => $validated['status'],
-                    'manager_comments' => $validated['manager_comments'],
-                    'approved_by' => Auth::id(),
-                    'approved_at' => now(),
-                ]);
-
-                // Create attendance records if approved
                 if ($validated['status'] === 'approved') {
-                    // Double-check balance before final approval
-                    $currentYear = now()->year;
-                    $leaveBalance = \App\Models\LeaveBalance::where('employee_id', $leaveApplication->employee_id)
-                        ->where('leave_type_id', $leaveApplication->leave_type_id)
-                        ->where('year', $currentYear)
-                        ->first();
-
-                    if ($leaveBalance && $leaveBalance->remaining_days < $leaveApplication->total_days) {
-                        return redirect()->back()->with('error', 
-                            __('Cannot approve: Insufficient leave balance. Available: :available days, Required: :required days', [
-                                'available' => $leaveBalance->remaining_days,
-                                'required' => $leaveApplication->total_days
-                            ])
-                        );
-                    }
-
-                    $leaveApplication->createAttendanceRecords();
+                    $this->approvalService->approve($leaveApplication, Auth::user(), $validated['manager_comments']);
+                } else {
+                    $this->approvalService->reject($leaveApplication, Auth::user(), $validated['manager_comments']);
                 }
 
                 return redirect()->back()->with('success', __('Leave application status updated successfully'));

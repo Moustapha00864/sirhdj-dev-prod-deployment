@@ -71,6 +71,7 @@ use App\Http\Controllers\SSPayPaymentController;
 use App\Http\Controllers\PublicFormController;
 use App\Http\Controllers\BranchController;
 use App\Http\Controllers\DepartmentController;
+use App\Http\Controllers\LeaveSettingController;
 use App\Http\Controllers\CookieConsentController;
 
 use App\Http\Controllers\EmployeeController;
@@ -967,6 +968,13 @@ Route::middleware(['auth', 'verified', 'setting'])->group(function () {
             Route::put('hr/leave-applications/{leaveApplication}', [\App\Http\Controllers\LeaveApplicationController::class, 'update'])->middleware('permission:edit-leave-applications')->name('hr.leave-applications.update');
             Route::delete('hr/leave-applications/{leaveApplication}', [\App\Http\Controllers\LeaveApplicationController::class, 'destroy'])->middleware('permission:delete-leave-applications')->name('hr.leave-applications.destroy');
             Route::put('hr/leave-applications/{leaveApplication}/status', [\App\Http\Controllers\LeaveApplicationController::class, 'updateStatus'])->middleware('permission:approve-leave-applications')->name('hr.leave-applications.update-status');
+            Route::get('hr/leave-applications/{leave}/download-summary', [\App\Http\Controllers\LeaveApplicationController::class, 'downloadSummary'])->name('hr.leave-applications.download-summary');
+        });
+
+        // Leave Settings routes
+        Route::middleware('permission:manage-leave-settings')->group(function () {
+            Route::get('hr/leave-settings', [LeaveSettingController::class, 'index'])->name('hr.leave-settings.index');
+            Route::post('hr/leave-settings', [LeaveSettingController::class, 'update'])->name('hr.leave-settings.store');
         });
 
         // Leave Balances routes
@@ -976,6 +984,8 @@ Route::middleware(['auth', 'verified', 'setting'])->group(function () {
             Route::put('hr/leave-balances/{leaveBalance}', [\App\Http\Controllers\LeaveBalanceController::class, 'update'])->middleware('permission:edit-leave-balances')->name('hr.leave-balances.update');
             Route::delete('hr/leave-balances/{leaveBalance}', [\App\Http\Controllers\LeaveBalanceController::class, 'destroy'])->middleware('permission:delete-leave-balances')->name('hr.leave-balances.destroy');
             Route::put('hr/leave-balances/{leaveBalance}/adjust', [\App\Http\Controllers\LeaveBalanceController::class, 'adjust'])->middleware('permission:adjust-leave-balances')->name('hr.leave-balances.adjust');
+            Route::get('hr/leave-balances/{leaveBalance}/movements', [\App\Http\Controllers\LeaveBalanceController::class, 'getMovements'])->middleware('permission:view-leave-balances')->name('hr.leave-balances.movements');
+            Route::get('hr/employees/{employee}/leave-balances', [\App\Http\Controllers\LeaveBalanceController::class, 'getEmployeeBalances'])->middleware('permission:view-leave-balances')->name('hr.employees.leave-balances');
         });
 
         // Shifts routes
@@ -1096,7 +1106,7 @@ Route::middleware(['auth', 'verified', 'setting'])->group(function () {
         })->name('plan-requests.index');
 
         // Companies routes
-        Route::middleware(['checksaas','permission:manage-companies'])->group(function () {
+        Route::middleware(['checksaas', 'permission:manage-companies'])->group(function () {
             Route::get('companies', [CompanyController::class, 'index'])->middleware('permission:manage-companies')->name('companies.index');
             Route::post('companies', [CompanyController::class, 'store'])->middleware('permission:create-companies')->name('companies.store');
             Route::put('companies/{company}', [CompanyController::class, 'update'])->middleware('permission:edit-companies')->name('companies.update');
@@ -1109,7 +1119,7 @@ Route::middleware(['auth', 'verified', 'setting'])->group(function () {
 
 
         // Coupons routes
-        Route::middleware(['checksaas','permission:manage-coupons'])->group(function () {
+        Route::middleware(['checksaas', 'permission:manage-coupons'])->group(function () {
             Route::get('coupons', [CouponController::class, 'index'])->middleware('permission:manage-coupons')->name('coupons.index');
             Route::get('coupons/{coupon}', [CouponController::class, 'show'])->middleware('permission:view-coupons')->name('coupons.show');
             Route::post('coupons', [CouponController::class, 'store'])->middleware('permission:create-coupons')->name('coupons.store');
@@ -1119,7 +1129,7 @@ Route::middleware(['auth', 'verified', 'setting'])->group(function () {
         });
 
         // Plan Requests routes
-        Route::middleware(['checksaas','permission:manage-plan-requests'])->group(function () {
+        Route::middleware(['checksaas', 'permission:manage-plan-requests'])->group(function () {
             Route::get('plan-requests', [PlanRequestController::class, 'index'])->middleware('permission:manage-plan-requests')->name('plan-requests.index');
             Route::post('plan-requests/{planRequest}/approve', [PlanRequestController::class, 'approve'])->middleware('permission:approve-plan-requests')->name('plan-requests.approve');
             Route::post('plan-requests/{planRequest}/reject', [PlanRequestController::class, 'reject'])->middleware('permission:reject-plan-requests')->name('plan-requests.reject');
@@ -1128,7 +1138,7 @@ Route::middleware(['auth', 'verified', 'setting'])->group(function () {
 
 
         // Referral routes
-        Route::middleware(['checksaas','permission:manage-referral'])->group(function () {
+        Route::middleware(['checksaas', 'permission:manage-referral'])->group(function () {
             Route::get('referral', [ReferralController::class, 'index'])->middleware('permission:manage-referral')->name('referral.index');
             Route::get('referral/referred-users', [ReferralController::class, 'getReferredUsers'])->middleware('permission:manage-users-referral')->name('referral.referred-users');
             Route::post('referral/settings', [ReferralController::class, 'updateSettings'])->middleware('permission:manage-setting-referral')->name('referral.settings.update');

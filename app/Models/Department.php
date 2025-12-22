@@ -14,8 +14,19 @@ class Department extends BaseModel
         'branch_id',
         'description',
         'status',
-        'created_by'
+        'created_by',
+        'manager_id',
+        'validator2_id',
+        'director_id'
     ];
+
+    /**
+     * Get the manager of the department.
+     */
+    public function manager()
+    {
+        return $this->belongsTo(User::class, 'manager_id');
+    }
 
     /**
      * Get the branch that owns the department.
@@ -23,6 +34,22 @@ class Department extends BaseModel
     public function branch()
     {
         return $this->belongsTo(Branch::class);
+    }
+
+    /**
+     * Get the validator 2 of the department.
+     */
+    public function validator2()
+    {
+        return $this->belongsTo(User::class, 'validator2_id');
+    }
+
+    /**
+     * Get the facility director of the department.
+     */
+    public function director()
+    {
+        return $this->belongsTo(User::class, 'director_id');
     }
 
     /**
@@ -43,6 +70,6 @@ class Department extends BaseModel
 
     public function desginations()
     {
-        return $this->hasMany(Designation::class,'department_id','id');
+        return $this->hasMany(Designation::class, 'department_id', 'id');
     }
 }

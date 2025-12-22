@@ -1,10 +1,11 @@
 // pages/hr/employees/show.tsx
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { PageTemplate } from '@/components/page-template';
 import { usePage, router } from '@inertiajs/react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Progress } from '@/components/ui/progress';
 import { hasPermission } from '@/utils/authorization';
 import { CrudDeleteModal } from '@/components/CrudDeleteModal';
 import { toast } from '@/components/custom-toast';
@@ -12,26 +13,29 @@ import { useInitials } from '@/hooks/use-initials';
 import { useTranslation } from 'react-i18next';
 import { Edit, Trash2, Download, FileText, Calendar, Phone, Mail, MapPin, Building, Briefcase, CreditCard, User, Lock, Unlock, ArrowLeft, Check, X } from 'lucide-react';
 import { getImagePath } from '@/utils/helpers';
+import axios from 'axios';
 
 export default function EmployeeShow() {
   const { t } = useTranslation();
   const { auth, employee } = usePage().props as any;
   const permissions = auth?.permissions || [];
   const getInitials = useInitials();
-  
+
   // State
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('basic_info');
-  
+  const [leaveBalances, setLeaveBalances] = useState<any[]>([]);
+  const [isLoadingBalances, setIsLoadingBalances] = useState(false);
+
   const handleEdit = () => {
     router.get(route('hr.employees.edit', employee.id));
   };
-  
+
   const handleDeleteConfirm = () => {
     toast.loading(t('Deleting employee...'));
-    
+
     router.delete(route('hr.employees.destroy', employee.id), {
-      onSuccess: (page) => {
+      onSuccess: (page : any) => {
         toast.dismiss();
         if (page.props.flash.success) {
           toast.success(t(page.props.flash.success));
@@ -50,13 +54,13 @@ export default function EmployeeShow() {
       }
     });
   };
-  
+
   const handleToggleStatus = () => {
     const newStatus = employee.status === 'active' ? 'inactive' : 'active';
     toast.loading(`${newStatus === 'active' ? t('Activating') : t('Deactivating')} employee...`);
-    
+
     router.put(route('hr.employees.toggle-status', employee.id), {}, {
-      onSuccess: (page) => {
+      onSuccess: (page : any) => {
         toast.dismiss();
         if (page.props.flash.success) {
           toast.success(t(page.props.flash.success));
@@ -74,12 +78,12 @@ export default function EmployeeShow() {
       }
     });
   };
-  
+
   const handleDeleteDocument = (documentId: number) => {
     toast.loading(t('Deleting document...'));
-    
+
     router.delete(route('hr.employees.documents.destroy', [employee.id, documentId]), {
-      onSuccess: (page) => {
+      onSuccess: (page : any) => {
         toast.dismiss();
         if (page.props.flash.success) {
           toast.success(t(page.props.flash.success));
@@ -101,9 +105,9 @@ export default function EmployeeShow() {
   const handleDocumentVerification = (documentId: number, status: 'verified' | 'rejected') => {
     const action = status === 'verified' ? 'approve' : 'reject';
     toast.loading(t(`${status === 'verified' ? 'Approving' : 'Rejecting'} document...`));
-    
+
     router.put(route(`hr.employees.documents.${action}`, [employee.id, documentId]), {}, {
-      onSuccess: (page) => {
+      onSuccess: (page : any) => {
         toast.dismiss();
         if (page.props.flash?.success) {
           toast.success(t(page.props.flash.success));
@@ -137,8 +141,8 @@ export default function EmployeeShow() {
   ];
 
   return (
-    <PageTemplate 
-      title={employee?.name || t("Employee Details")} 
+    <PageTemplate
+      title={employee?.name || t("Employee Details")}
       url={`/hr/employees/${employee?.id}`}
       actions={pageActions}
       breadcrumbs={breadcrumbs}
@@ -157,14 +161,13 @@ export default function EmployeeShow() {
               </div>
               <h2 className="text-xl font-bold mb-1">{employee.name}</h2>
               <p className="text-sm text-muted-foreground mb-2">{employee.employee?.designation?.name || '-'}</p>
-              <div className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium mb-4 ${
-                employee.status === 'active' 
-                  ? 'bg-green-50 text-green-700 ring-1 ring-inset ring-green-600/20' 
+              <div className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium mb-4 ${employee.status === 'active'
+                  ? 'bg-green-50 text-green-700 ring-1 ring-inset ring-green-600/20'
                   : 'bg-red-50 text-red-700 ring-1 ring-inset ring-red-600/20'
-              }`}>
+                }`}>
                 {employee.status === 'active' ? t('Active') : t('Inactive')}
               </div>
-              
+
               <div className="w-full space-y-3">
                 <div className="flex items-center">
                   <User className="h-4 w-4 mr-2 text-muted-foreground" />
@@ -218,14 +221,15 @@ export default function EmployeeShow() {
         {/* Employee Details Tabs */}
         <div className="lg:col-span-3">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-            <TabsList className="grid grid-cols-5 mb-4">
+            <TabsList className="grid grid-cols-6 mb-4">
               <TabsTrigger value="basic_info">{t('Basic Info')}</TabsTrigger>
               <TabsTrigger value="employment">{t('Employment')}</TabsTrigger>
               <TabsTrigger value="contact">{t('Contact')}</TabsTrigger>
               <TabsTrigger value="banking">{t('Banking')}</TabsTrigger>
+              <TabsTrigger value="leave_balances">{t('Leave Balances')}</TabsTrigger>
               <TabsTrigger value="documents">{t('Documents')}</TabsTrigger>
             </TabsList>
-            
+
             {/* Basic Info Tab */}
             <TabsContent value="basic_info">
               <Card>
@@ -262,7 +266,7 @@ export default function EmployeeShow() {
                 </CardContent>
               </Card>
             </TabsContent>
-            
+
             {/* Employment Tab */}
             <TabsContent value="employment">
               <Card>
@@ -307,7 +311,7 @@ export default function EmployeeShow() {
                 </CardContent>
               </Card>
             </TabsContent>
-            
+
             {/* Contact Tab */}
             <TabsContent value="contact">
               <Card>
@@ -341,7 +345,7 @@ export default function EmployeeShow() {
                       <p>{employee.employee?.postal_code || '-'}</p>
                     </div>
                   </div>
-                  
+
                   <div className="mt-6">
                     <h3 className="text-lg font-medium mb-4">{t('Emergency Contact')}</h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -362,7 +366,7 @@ export default function EmployeeShow() {
                 </CardContent>
               </Card>
             </TabsContent>
-            
+
             {/* Banking Tab */}
             <TabsContent value="banking">
               <Card>
@@ -399,7 +403,19 @@ export default function EmployeeShow() {
                 </CardContent>
               </Card>
             </TabsContent>
-            
+
+            {/* Leave Balances Tab */}
+            <TabsContent value="leave_balances">
+              <Card>
+                <CardHeader>
+                  <CardTitle>{t('Leave Balances')}</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <LeaveBalancesTab employeeId={employee.id} />
+                </CardContent>
+              </Card>
+            </TabsContent>
+
             {/* Documents Tab */}
             <TabsContent value="documents">
               <Card>
@@ -420,15 +436,14 @@ export default function EmployeeShow() {
                                   <p className="text-sm text-muted-foreground">
                                     {document.expiry_date ? `${t('Expires')}: ${window.appSettings?.formatDateTime(document.expiry_date, false) || new Date(document.expiry_date).toLocaleDateString()}` : t('No expiry date')}
                                   </p>
-                                  <div className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium mt-2 ${
-                                    document.verification_status === 'verified' 
-                                      ? 'bg-green-50 text-green-700 ring-1 ring-inset ring-green-600/20' 
+                                  <div className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium mt-2 ${document.verification_status === 'verified'
+                                      ? 'bg-green-50 text-green-700 ring-1 ring-inset ring-green-600/20'
                                       : document.verification_status === 'rejected'
                                         ? 'bg-red-50 text-red-700 ring-1 ring-inset ring-red-600/20'
                                         : 'bg-yellow-50 text-yellow-700 ring-1 ring-inset ring-yellow-600/20'
-                                  }`}>
-                                    {document.verification_status === 'verified' 
-                                      ? t('Verified') 
+                                    }`}>
+                                    {document.verification_status === 'verified'
+                                      ? t('Verified')
                                       : document.verification_status === 'rejected'
                                         ? t('Rejected')
                                         : t('Pending')}
@@ -446,17 +461,17 @@ export default function EmployeeShow() {
                                 )}
                                 {hasPermission(permissions, 'edit-employees') && document.verification_status === 'pending' && (
                                   <>
-                                    <Button 
-                                      variant="outline" 
-                                      size="sm" 
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
                                       onClick={() => handleDocumentVerification(document.id, 'verified')}
                                       className="text-green-600 hover:text-green-700"
                                     >
                                       <Check className="h-4 w-4" />
                                     </Button>
-                                    <Button 
-                                      variant="outline" 
-                                      size="sm" 
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
                                       onClick={() => handleDocumentVerification(document.id, 'rejected')}
                                       className="text-red-600 hover:text-red-700"
                                     >
@@ -491,5 +506,125 @@ export default function EmployeeShow() {
         entityName="employee"
       />
     </PageTemplate>
+  );
+}
+
+function LeaveBalancesTab({ employeeId }: { employeeId: number }) {
+  const { t } = useTranslation();
+  const [balances, setBalances] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchBalances = async () => {
+      try {
+        setIsLoading(true);
+        const response = await axios.get(route('hr.employees.leave-balances', employeeId));
+        setBalances(response.data);
+      } catch (error) {
+        console.error('Failed to fetch leave balances:', error);
+        toast.error(t('Failed to load leave balances'));
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchBalances();
+  }, [employeeId]);
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center py-8">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  if (balances.length === 0) {
+    return (
+      <div className="text-center py-8 text-muted-foreground">
+        {t('No leave balances found for this employee')}
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      {balances.map((balance) => {
+        const utilizationPercent = balance.allocated_days > 0
+          ? ((balance.used_days / (balance.allocated_days + balance.carried_forward + balance.manual_adjustment)) * 100)
+          : 0;
+
+        return (
+          <Card key={balance.id} className="border">
+            <CardContent className="p-6">
+              <div className="flex items-start justify-between mb-4">
+                <div className="flex items-center gap-3">
+                  <div
+                    className="w-4 h-4 rounded-full"
+                    style={{ backgroundColor: balance.leave_type.color }}
+                  />
+                  <div>
+                    <h4 className="font-semibold text-lg">{balance.leave_type.name}</h4>
+                    <p className="text-sm text-muted-foreground">{t('Year')}: {balance.year}</p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="text-2xl font-bold text-primary">
+                    {balance.remaining_days}
+                  </div>
+                  <div className="text-xs text-muted-foreground">{t('Days Remaining')}</div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-4 gap-4 mb-4">
+                <div className="text-center p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                  <div className="text-lg font-semibold text-blue-600 dark:text-blue-400">
+                    {balance.allocated_days}
+                  </div>
+                  <div className="text-xs text-muted-foreground">{t('Allocated')}</div>
+                </div>
+                <div className="text-center p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
+                  <div className="text-lg font-semibold text-green-600 dark:text-green-400">
+                    {balance.carried_forward}
+                  </div>
+                  <div className="text-xs text-muted-foreground">{t('Carried Forward')}</div>
+                </div>
+                <div className="text-center p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
+                  <div className="text-lg font-semibold text-purple-600 dark:text-purple-400">
+                    {balance.manual_adjustment}
+                  </div>
+                  <div className="text-xs text-muted-foreground">{t('Adjustment')}</div>
+                </div>
+                <div className="text-center p-3 bg-red-50 dark:bg-red-900/20 rounded-lg">
+                  <div className="text-lg font-semibold text-red-600 dark:text-red-400">
+                    {balance.used_days}
+                  </div>
+                  <div className="text-xs text-muted-foreground">{t('Used')}</div>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span>{t('Utilization')}</span>
+                  <span className="font-medium">{utilizationPercent.toFixed(1)}%</span>
+                </div>
+                <Progress value={utilizationPercent} className="h-2" />
+              </div>
+
+              {balance.adjustment_reason && (
+                <div className="mt-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border border-yellow-200 dark:border-yellow-800">
+                  <p className="text-xs font-medium text-yellow-800 dark:text-yellow-200 mb-1">
+                    {t('Adjustment Reason')}:
+                  </p>
+                  <p className="text-sm text-yellow-700 dark:text-yellow-300">
+                    {balance.adjustment_reason}
+                  </p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        );
+      })}
+    </div>
   );
 }

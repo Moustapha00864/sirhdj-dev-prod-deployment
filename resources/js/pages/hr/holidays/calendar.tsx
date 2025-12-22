@@ -129,11 +129,10 @@ export default function HolidayCalendar() {
   
   return (
     <PageTemplate 
-      title={`${t("Holiday Calendar")} - ${selectedYear}`} 
+      title={`${t("Holiday Calendar")} - ${selectedYear}`}
       url="/hr/holidays/calendar"
       actions={pageActions}
-      breadcrumbs={breadcrumbs}
-    >
+      breadcrumbs={breadcrumbs} description={''}>
 
       
       {/* Legend */}

@@ -12,6 +12,8 @@ import { toast } from '@/components/custom-toast';
 import { useTranslation } from 'react-i18next';
 import { Pagination } from '@/components/ui/pagination';
 import { SearchAndFilterBar } from '@/components/ui/search-and-filter-bar';
+import ApprovalTracker from '@/components/Leave/ApprovalTracker';
+import ApprovalModal from '@/components/Leave/ApprovalModal';
 
 export default function LeaveApplications() {
   const { t } = useTranslation();
@@ -29,6 +31,7 @@ export default function LeaveApplications() {
   const [isStatusModalOpen, setIsStatusModalOpen] = useState(false);
   const [currentItem, setCurrentItem] = useState<any>(null);
   const [formMode, setFormMode] = useState<'create' | 'edit' | 'view'>('create');
+  const [isApprovalModalOpen, setIsApprovalModalOpen] = useState(false);
 
   // Check if any filters are active
   const hasActiveFilters = () => {
@@ -87,10 +90,8 @@ export default function LeaveApplications() {
         setIsDeleteModalOpen(true);
         break;
       case 'approve':
-        handleStatusUpdate(item, 'approved');
-        break;
       case 'reject':
-        handleStatusUpdate(item, 'rejected');
+        setIsApprovalModalOpen(true);
         break;
     }
   };
@@ -106,7 +107,7 @@ export default function LeaveApplications() {
       toast.loading(t('Creating leave application...'));
 
       router.post(route('hr.leave-applications.store'), formData, {
-        onSuccess: (page) => {
+        onSuccess: (page: any) => {
           setIsFormModalOpen(false);
           toast.dismiss();
           if (page.props.flash.success) {
@@ -128,7 +129,7 @@ export default function LeaveApplications() {
       toast.loading(t('Updating leave application...'));
 
       router.put(route('hr.leave-applications.update', currentItem.id), formData, {
-        onSuccess: (page) => {
+        onSuccess: (page: any) => {
           setIsFormModalOpen(false);
           toast.dismiss();
           if (page.props.flash.success) {
@@ -153,7 +154,7 @@ export default function LeaveApplications() {
     toast.loading(t('Deleting leave application...'));
 
     router.delete(route('hr.leave-applications.destroy', currentItem.id), {
-      onSuccess: (page) => {
+      onSuccess: (page : any) => {
         setIsDeleteModalOpen(false);
         toast.dismiss();
         if (page.props.flash.success) {
@@ -177,11 +178,11 @@ export default function LeaveApplications() {
     const statusText = status === 'approved' ? t('Approving') : t('Rejecting');
     toast.loading(`${statusText} leave application...`);
 
-    router.put(route('hr.leave-applications.update-status', application.id), { 
+    router.put(route('hr.leave-applications.update-status', application.id), {
       status,
       manager_comments: '' // Add empty manager_comments to avoid undefined key error
     }, {
-      onSuccess: (page) => {
+      onSuccess: (page : any) => {
         toast.dismiss();
         if (page.props.flash.success) {
           toast.success(t(page.props.flash.success));
@@ -221,7 +222,7 @@ export default function LeaveApplications() {
     pageActions.push({
       label: t('Add Leave Application'),
       icon: <Plus className="h-4 w-4 mr-2" />,
-      variant: 'default',
+      variant: 'default' as any,
       onClick: () => handleAddNew()
     });
   }
@@ -244,7 +245,7 @@ export default function LeaveApplications() {
       label: t('Leave Type'),
       render: (value: any, row: any) => (
         <div className="flex items-center gap-2">
-          <div 
+          <div
             className="w-3 h-3 rounded-full"
             style={{ backgroundColor: row.leave_type?.color }}
           />
@@ -253,12 +254,23 @@ export default function LeaveApplications() {
       )
     },
     {
+      key: 'workflow',
+      label: t('Approval Progress'),
+      render: (value: any, row: any) => (
+        <ApprovalTracker
+          currentStage={row.current_stage || 1}
+          status={row.status}
+          approvals={row.approvals || []}
+        />
+      )
+    },
+    {
       key: 'start_date',
       label: t('Start Date'),
       sortable: true,
       // render: (value: string) => new Date(value).toLocaleDateString()
       render: (value: string) => window.appSettings?.formatDateTime(value, false) || new Date(value).toLocaleDateString()
-      
+
     },
     {
       key: 'end_date',
@@ -321,7 +333,24 @@ export default function LeaveApplications() {
       action: 'approve',
       className: 'text-green-500',
       requiredPermission: 'approve-leave-applications',
-      condition: (item: any) => item.status === 'pending'
+      condition: (item: any) => {
+        if (item.status !== 'pending') return false;
+
+        // Stage 1: Department Manager
+        if (item.current_stage === 1) {
+          // Check if current user is the manager of this department OR admin
+          return hasPermission(permissions, 'approve-leave-applications');
+          // Better check in controller, but for UI visibility we rely on general permission 
+          // or we could pass specific current_user_is_manager flag from backend.
+        }
+
+        // Stage 2: HR
+        if (item.current_stage === 2) {
+          return hasPermission(permissions, 'approve-leave-applications');
+        }
+
+        return false;
+      }
     },
     {
       label: t('Reject'),
@@ -367,6 +396,7 @@ export default function LeaveApplications() {
   return (
     <PageTemplate
       title={t("Leave Application Management")}
+      description={t("Manage employee leave requests and approvals")}
       url="/hr/leave-applications"
       actions={pageActions}
       breadcrumbs={breadcrumbs}
@@ -438,7 +468,6 @@ export default function LeaveApplications() {
           permissions={permissions}
           entityPermissions={{
             view: 'view-leave-applications',
-            create: 'create-leave-applications',
             edit: 'edit-leave-applications',
             delete: 'delete-leave-applications'
           }}
@@ -485,9 +514,9 @@ export default function LeaveApplications() {
             { name: 'start_date', label: t('Start Date'), type: 'date', required: true },
             { name: 'end_date', label: t('End Date'), type: 'date', required: true },
             { name: 'reason', label: t('Reason'), type: 'textarea', required: true },
-            { 
-              name: 'attachment', 
-              label: t('Attachment'), 
+            {
+              name: 'attachment',
+              label: t('Attachment'),
               type: 'custom',
               render: (field, formData, handleChange) => (
                 <div>
@@ -498,7 +527,6 @@ export default function LeaveApplications() {
                   />
                 </div>
               ),
-              helpText: t('Upload PDF, DOC, DOCX, JPG, JPEG, PNG files')
             }
           ],
           modalSize: 'lg'
@@ -522,6 +550,15 @@ export default function LeaveApplications() {
         itemName={`${currentItem?.employee?.name} - ${currentItem?.leave_type?.name}` || ''}
         entityName="leave application"
       />
+
+      {/* Approval Modal */}
+      {currentItem && (
+        <ApprovalModal
+          leaveId={currentItem.id}
+          isOpen={isApprovalModalOpen}
+          onClose={() => setIsApprovalModalOpen(false)}
+        />
+      )}
     </PageTemplate>
   );
 }

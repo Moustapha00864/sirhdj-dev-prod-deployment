@@ -20,8 +20,8 @@ import DependentDropdown from '@/components/DependentDropdown';
 interface CrudFormModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (data: any) => void;
-  formConfig: {
+  onSubmit?: (data: any) => void;
+  formConfig?: {
     fields: FormField[];
     modalSize?: string;
     columns?: number;
@@ -37,18 +37,22 @@ interface CrudFormModalProps {
   mode: 'create' | 'edit' | 'view';
   description?: string;
   errors?: Record<string, string | string[]>;
+  children?: React.ReactNode;
+  contentOnly?: boolean;
 }
 
 export function CrudFormModal({
   isOpen,
   onClose,
   onSubmit,
-  formConfig,
+  formConfig = { fields: [] },
   initialData = {},
   title,
   mode,
   description,
-  errors: backendErrors = {}
+  errors: backendErrors = {},
+  children,
+  contentOnly = false
 }: CrudFormModalProps) {
   const { t } = useTranslation();
   const [formData, setFormData] = useState<Record<string, any>>({});
@@ -212,7 +216,7 @@ export function CrudFormModal({
       }
     });
 
-    onSubmit(cleanData);
+    if (onSubmit) onSubmit(cleanData);
   };
 
   const renderField = (field: FormField) => {
@@ -347,7 +351,6 @@ export function CrudFormModal({
           <Select
             value={currentValue}
             onValueChange={(value) => handleChange(field.name, value)}
-            disabled={mode === 'view'}
           >
             <SelectTrigger className={errors[field.name] ? 'border-red-500' : ''}>
               <SelectValue placeholder={field.placeholder || `Select ${field.label}`}>
@@ -380,7 +383,6 @@ export function CrudFormModal({
           <RadioGroup
             value={formData[field.name] || ''}
             onValueChange={(value) => handleChange(field.name, value)}
-            disabled={mode === 'view'}
             className="flex gap-4"
           >
             {field.options?.map((option) => (
@@ -399,7 +401,6 @@ export function CrudFormModal({
               id={field.name}
               checked={!!formData[field.name]}
               onCheckedChange={(checked) => handleChange(field.name, checked)}
-              disabled={mode === 'view'}
             />
             <Label htmlFor={field.name}>{field.placeholder || field.label}</Label>
           </div>
@@ -412,7 +413,6 @@ export function CrudFormModal({
             id={field.name}
             checked={!!formData[field.name]}
             onCheckedChange={(checked) => handleChange(field.name, checked)}
-            disabled={mode === 'view'}
           />
         );
 
@@ -458,7 +458,6 @@ export function CrudFormModal({
                 }
               }}
               className={errors[field.name] ? 'border-red-500' : ''}
-              disabled={mode === 'view'}
             />
             {mode === 'edit' && initialData[field.name] && (
               <div className="text-xs text-gray-500 mt-1">
@@ -514,7 +513,7 @@ export function CrudFormModal({
         const dependentValues: Record<string, string> = {};
         field.dependentConfig?.forEach((depField) => {
           dependentValues[depField.name] = formData[depField.name] || '';
-          
+
         });
         return (
           <DependentDropdown
@@ -592,85 +591,34 @@ export function CrudFormModal({
           <DialogDescription>{description || " "}</DialogDescription>
         </DialogHeader>
         <ScrollArea className="max-h-[70vh] pr-4">
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {/* Price Summary Section */}
-            {formConfig.priceSummary && (
-              <div className="bg-gray-50 p-4 rounded-lg mb-4">
-                <div className="flex justify-between items-center mb-2">
-                  <span className="text-sm text-gray-600">{t("Unit Price")}:</span>
-                  <span className="font-medium">${formConfig.priceSummary.unitPrice.toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between items-center mb-2">
-                  <span className="text-sm text-gray-600">{t("Quantity")}:</span>
-                  <span className="font-medium">{formData[formConfig.priceSummary.quantityFieldName || 'quantity'] || formConfig.priceSummary.quantity || 1}</span>
-                </div>
-                <div className="border-t pt-2">
-                  <div className="flex justify-between items-center">
-                    <span className="font-semibold">{t("Total Price")}:</span>
-                    <span className="font-bold text-lg text-primary">
-                      ${calculateTotal().toFixed(2)}
-                    </span>
+          {contentOnly ? (
+            children
+          ) : (
+            <form onSubmit={handleSubmit} className="space-y-4">
+              {/* Price Summary Section */}
+              {formConfig.priceSummary && (
+                <div className="bg-gray-50 p-4 rounded-lg mb-4">
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-sm text-gray-600">{t("Unit Price")}:</span>
+                    <span className="font-medium">${formConfig.priceSummary.unitPrice.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-sm text-gray-600">{t("Quantity")}:</span>
+                    <span className="font-medium">{formData[formConfig.priceSummary.quantityFieldName || 'quantity'] || formConfig.priceSummary.quantity || 1}</span>
+                  </div>
+                  <div className="border-t pt-2">
+                    <div className="flex justify-between items-center">
+                      <span className="font-semibold">{t("Total Price")}:</span>
+                      <span className="font-bold text-lg text-primary">
+                        ${calculateTotal().toFixed(2)}
+                      </span>
+                    </div>
                   </div>
                 </div>
-              </div>
-            )}
-            {layout === 'grid' ? (
-              <div style={{ display: 'grid', gridTemplateColumns: `repeat(${columns}, 1fr)`, gap: '1rem' }}>
-                {formConfig.fields.map((field) => {
-                  if (field.conditional && !field.conditional(mode, formData)) {
-                    return null;
-                  }
-                  return (
-                    <div
-                      key={field.name}
-                      className="space-y-2"
-                      style={{
-                        gridColumn: field.colSpan ? `span ${field.colSpan}` : 'span 1',
-                        width: '100%'
-                      }}
-                    >
-                      <Label htmlFor={field.name} className="text-sm font-medium">
-                        {field.label} {field.required && !(field.type === 'file' && mode === 'edit') && <span className="text-red-500">*</span>}
-                      </Label>
-                      {renderField(field)}
-                      {errors[field.name] && (
-                        <p className="text-xs text-red-500">{errors[field.name]}</p>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            ) : layout === 'flex' ? (
-              <div className="flex flex-wrap gap-4">
-                {formConfig.fields.map((field) => {
-                  if (field.conditional && !field.conditional(mode, formData)) {
-                    return null;
-                  }
-                  return (
-                    <div
-                      key={field.name}
-                      className="space-y-2"
-                      style={{
-                        width: field.width || "100%",
-                        flexGrow: field.width ? 0 : 1
-                      }}
-                    >
-                      <Label htmlFor={field.name} className="text-sm font-medium">
-                        {field.label} {field.required && !(field.type === 'file' && mode === 'edit') && <span className="text-red-500">*</span>}
-                      </Label>
-                      {renderField(field)}
-                      {errors[field.name] && (
-                        <p className="text-xs text-red-500">{errors[field.name]}</p>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
-              // Default layout with row grouping
-              groupFieldsByRow().map(([rowNumber, fields]) => (
-                <div key={rowNumber} className="flex flex-wrap gap-4 mb-4">
-                  {fields.map((field) => {
+              )}
+              {layout === 'grid' ? (
+                <div style={{ display: 'grid', gridTemplateColumns: `repeat(${columns}, 1fr)`, gap: '1rem' }}>
+                  {formConfig.fields.map((field) => {
                     if (field.conditional && !field.conditional(mode, formData)) {
                       return null;
                     }
@@ -678,7 +626,10 @@ export function CrudFormModal({
                       <div
                         key={field.name}
                         className="space-y-2"
-                        style={{ width: field.width || "100%" }}
+                        style={{
+                          gridColumn: field.colSpan ? `span ${field.colSpan}` : 'span 1',
+                          width: '100%'
+                        }}
                       >
                         <Label htmlFor={field.name} className="text-sm font-medium">
                           {field.label} {field.required && !(field.type === 'file' && mode === 'edit') && <span className="text-red-500">*</span>}
@@ -691,15 +642,67 @@ export function CrudFormModal({
                     );
                   })}
                 </div>
-              ))
-            )}
-          </form>
+              ) : layout === 'flex' ? (
+                <div className="flex flex-wrap gap-4">
+                  {formConfig.fields.map((field) => {
+                    if (field.conditional && !field.conditional(mode, formData)) {
+                      return null;
+                    }
+                    return (
+                      <div
+                        key={field.name}
+                        className="space-y-2"
+                        style={{
+                          width: field.width || "100%",
+                          flexGrow: field.width ? 0 : 1
+                        }}
+                      >
+                        <Label htmlFor={field.name} className="text-sm font-medium">
+                          {field.label} {field.required && !(field.type === 'file' && mode === 'edit') && <span className="text-red-500">*</span>}
+                        </Label>
+                        {renderField(field)}
+                        {errors[field.name] && (
+                          <p className="text-xs text-red-500">{errors[field.name]}</p>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                // Default layout with row grouping
+                groupFieldsByRow().map(([rowNumber, fields]) => (
+                  <div key={rowNumber} className="flex flex-wrap gap-4 mb-4">
+                    {fields.map((field) => {
+                      if (field.conditional && !field.conditional(mode, formData)) {
+                        return null;
+                      }
+                      return (
+                        <div
+                          key={field.name}
+                          className="space-y-2"
+                          style={{ width: field.width || "100%" }}
+                        >
+                          <Label htmlFor={field.name} className="text-sm font-medium">
+                            {field.label} {field.required && !(field.type === 'file' && mode === 'edit') && <span className="text-red-500">*</span>}
+                          </Label>
+                          {renderField(field)}
+                          {errors[field.name] && (
+                            <p className="text-xs text-red-500">{errors[field.name]}</p>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                ))
+              )}
+            </form>
+          )}
         </ScrollArea>
         <DialogFooter className="sm:justify-end">
           <Button type="button" variant="outline" onClick={onClose}>
             {t("Cancel")}
           </Button>
-          {mode !== 'view' && (
+          {mode !== 'view' && !contentOnly && (
             <Button type="button" onClick={handleSubmit}>{t("Save")}</Button>
           )}
         </DialogFooter>

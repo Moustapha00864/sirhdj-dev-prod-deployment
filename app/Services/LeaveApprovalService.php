@@ -1,0 +1,234 @@
+<?php
+
+namespace App\Services;
+
+use App\Models\LeaveApplication;
+use App\Models\LeaveApproval;
+use App\Models\AuditLog;
+use App\Models\User;
+use App\Mail\LeaveStage1ApprovedMail;
+use App\Mail\LeaveStage2ApprovedMail;
+use App\Mail\LeaveRejectedMail;
+use App\Models\LeaveMovement;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Auth;
+
+class LeaveApprovalService
+{
+    public function approve(LeaveApplication $leave, User $approver, string $comments = null)
+    {
+        return DB::transaction(function () use ($leave, $approver, $comments) {
+            $currentStage = $leave->current_stage;
+            $department = $leave->employee->employee->department;
+
+            // Validation : verify approver is authorized for this stage
+            $this->validateApprover($leave, $approver, $currentStage);
+
+            // Record the approval
+            LeaveApproval::create([
+                'leave_application_id' => $leave->id,
+                'stage' => $currentStage,
+                'approver_id' => $approver->id,
+                'status' => 'approved',
+                'comments' => $comments,
+                'actioned_at' => now(),
+            ]);
+
+            // Determine next stage
+            $nextStage = $this->getNextStage($leave, $currentStage, $department);
+
+            if ($nextStage === 'completed') {
+                $leave->update([
+                    'status' => 'approved',
+                    'is_completed' => true,
+                    'approved_by' => $approver->id,
+                    'approved_at' => now(),
+                    'manager_comments' => $comments
+                ]);
+
+                // Finalization: create attendance records
+                $leave->createAttendanceRecords();
+
+                // Log movement: used leave
+                LeaveMovement::create([
+                    'leave_balance_id' => $this->getLeaveBalanceId($leave),
+                    'type' => 'used',
+                    'days' => $leave->total_days,
+                    'reason' => 'Leave approved: ' . $leave->id,
+                    'created_by' => $approver->id
+                ]);
+
+                // Update used_days and remaining_days on balance
+                $this->updateLeaveBalance($leave);
+
+                // Send final notification to employee
+                Mail::to($leave->employee->email)->send(new LeaveStage2ApprovedMail($leave));
+            } else {
+                $leave->update(['current_stage' => $nextStage]);
+
+                // Send notifications based on the new stage
+                $this->notifyNextStageApprovers($leave, $nextStage, $department);
+
+                // Also notify employee about progress
+                Mail::to($leave->employee->email)->send(new LeaveStage1ApprovedMail($leave));
+            }
+
+            // Audit log
+            AuditLog::create([
+                'user_id' => $approver->id,
+                'action' => 'leave_approved_stage_' . $currentStage,
+                'module' => 'LeaveManagement',
+                'target_id' => $leave->id,
+                'details' => ['comments' => $comments, 'next_stage' => $nextStage],
+                'ip_address' => request()->ip(),
+                'user_agent' => request()->userAgent()
+            ]);
+
+            return $leave;
+        });
+    }
+
+    private function getNextStage($leave, $currentStage, $department)
+    {
+        switch ($currentStage) {
+            case 1:
+                // Move to Stage 2 if validator2 exists, otherwise skip to Stage 3 (HR)
+                return ($department && $department->validator2_id) ? 2 : 3;
+            case 2:
+                // Stage 2 (Manager 2) always moves to Stage 3 (HR)
+                return 3;
+            case 3:
+                // Stage 3 (HR) moves to Stage 4 (Director)
+                return 4;
+            case 4:
+                // Final stage
+                return 'completed';
+            default:
+                return 'completed';
+        }
+    }
+
+    private function notifyNextStageApprovers($leave, $nextStage, $department)
+    {
+        $recipients = [];
+        if ($nextStage === 2) {
+            if ($department && $department->validator2) {
+                $recipients[] = $department->validator2->email;
+            }
+        } elseif ($nextStage === 3) {
+            $hrUsers = User::role('HR Generalist')->pluck('email')->toArray();
+            if (empty($hrUsers)) {
+                $hrUsers = User::role('Admin')->pluck('email')->toArray();
+            }
+            $recipients = $hrUsers;
+        } elseif ($nextStage === 4) {
+            if ($department && $department->director) {
+                $recipients[] = $department->director->email;
+            }
+        }
+
+        foreach ($recipients as $email) {
+            Mail::to($email)->send(new LeaveStage1ApprovedMail($leave));
+        }
+    }
+
+    public function reject(LeaveApplication $leave, User $approver, string $comments = null)
+    {
+        return DB::transaction(function () use ($leave, $approver, $comments) {
+            $currentStage = $leave->current_stage;
+            $this->validateApprover($leave, $approver, $currentStage);
+
+            LeaveApproval::create([
+                'leave_application_id' => $leave->id,
+                'stage' => $currentStage,
+                'approver_id' => $approver->id,
+                'status' => 'rejected',
+                'comments' => $comments,
+                'actioned_at' => now(),
+            ]);
+
+            $leave->update([
+                'status' => 'rejected',
+                'is_completed' => true,
+                'manager_comments' => $comments,
+                'approved_by' => $approver->id,
+                'approved_at' => now()
+            ]);
+
+            // Envoyer notification à l'employé
+            Mail::to($leave->employee->email)->send(new LeaveRejectedMail($leave, $comments));
+
+            // Journal d’audit
+            AuditLog::create([
+                'user_id' => $approver->id,
+                'action' => 'leave_rejected_stage_' . $currentStage,
+                'module' => 'LeaveManagement',
+                'target_id' => $leave->id,
+                'details' => ['comments' => $comments],
+                'ip_address' => request()->ip(),
+                'user_agent' => request()->userAgent()
+            ]);
+
+            return $leave;
+        });
+    }
+
+    private function validateApprover(LeaveApplication $leave, User $approver, int $stage)
+    {
+        if ($approver->hasRole('Admin')) {
+            return true;
+        }
+
+        $department = $leave->employee->employee->department;
+
+        switch ($stage) {
+            case 1:
+                if (!$department || $approver->id !== $department->manager_id) {
+                    abort(403, __('Seul le premier validateur peut approuver à l’étape 1'));
+                }
+                break;
+            case 2:
+                if (!$department || $approver->id !== $department->validator2_id) {
+                    abort(403, __('Seul le second validateur peut approuver à l’étape 2'));
+                }
+                break;
+            case 3:
+                if (!$approver->hasRole('HR Generalist')) {
+                    abort(403, __('Seuls les RH peuvent approuver à l’étape 3'));
+                }
+                break;
+            case 4:
+                if (!$department || $approver->id !== $department->director_id) {
+                    abort(403, __('Seul le directeur peut approuver à l’étape 4'));
+                }
+                break;
+            default:
+                abort(403, __('Étape de validation invalide'));
+        }
+
+        return true;
+    }
+
+    private function getLeaveBalanceId($leave)
+    {
+        $balance = \App\Models\LeaveBalance::where('employee_id', $leave->employee_id)
+            ->where('leave_type_id', $leave->leave_type_id)
+            ->first();
+
+        return $balance ? $balance->id : null;
+    }
+
+    private function updateLeaveBalance($leave)
+    {
+        $balance = \App\Models\LeaveBalance::where('employee_id', $leave->employee_id)
+            ->where('leave_type_id', $leave->leave_type_id)
+            ->first();
+
+        if ($balance) {
+            $balance->used_days += $leave->total_days;
+            $balance->calculateRemainingDays();
+            $balance->save();
+        }
+    }
+}
