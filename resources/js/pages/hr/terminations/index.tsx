@@ -126,7 +126,7 @@ export default function Terminations() {
       toast.loading(t('Creating termination...'));
 
       router.post(route('hr.terminations.store'), data, {
-        onSuccess: (page) => {
+        onSuccess: (page : any) => {
           setIsFormModalOpen(false);
           toast.dismiss();
           if (page.props.flash.success) {
@@ -148,7 +148,7 @@ export default function Terminations() {
       toast.loading(t('Updating termination...'));
       
       router.put(route('hr.terminations.update', currentItem.id), data, {
-        onSuccess: (page) => {
+        onSuccess: (page : any) => {
           setIsFormModalOpen(false);
           toast.dismiss();
           if (page.props.flash.success) {
@@ -173,7 +173,7 @@ export default function Terminations() {
     toast.loading(t('Updating termination status...'));
     
     router.put(route('hr.terminations.change-status', currentItem.id), formData, {
-      onSuccess: (page) => {
+      onSuccess: (page : any) => {
         setIsStatusModalOpen(false);
         toast.dismiss();
         if (page.props.flash.success) {
@@ -197,7 +197,7 @@ export default function Terminations() {
     toast.loading(t('Deleting termination...'));
     
     router.delete(route('hr.terminations.destroy', currentItem.id), {
-      onSuccess: (page) => {
+      onSuccess: (page : any) => {
         setIsDeleteModalOpen(false);
         toast.dismiss();
         if (page.props.flash.success) {
@@ -256,7 +256,7 @@ export default function Terminations() {
     { 
       key: 'employee.name', 
       label: t('Employee'), 
-      render: (_, row) => (
+      render: (value : any, row : any) => (
         <div>
           <div className="font-medium">{row.employee?.name || '-'}</div>
           <div className="text-xs text-gray-500">{row.employee?.employee_id || ''}</div>
@@ -266,29 +266,29 @@ export default function Terminations() {
     { 
       key: 'termination_type', 
       label: t('Type'),
-      render: (value) => value || '-'
+      render: (value : any) => value || '-'
     },
     { 
       key: 'termination_date', 
       label: t('Termination Date'),
       sortable: true,
-      render: (value) => value ? (window.appSettings?.formatDateTime(value,false) || new Date(value).toLocaleString()) : '-'
+      render: (value : any) => value ? (window.appSettings?.formatDateTime(value,false) || new Date(value).toLocaleString()) : '-'
     },
     { 
       key: 'notice_date', 
       label: t('Notice Date'),
       sortable: true,
-      render: (value) => value ? (window.appSettings?.formatDateTime(value,false) || new Date(value).toLocaleString()) : '-'
+      render: (value : any) => value ? (window.appSettings?.formatDateTime(value,false) || new Date(value).toLocaleString()) : '-'
     },
     { 
       key: 'reason', 
       label: t('Reason'),
-      render: (value) => value || '-'
+      render: (value : any) => value || '-'
     },
     { 
       key: 'status', 
       label: t('Status'),
-      render: (value) => {
+      render: (value : any) => {
         const statusClasses = {
           'planned': 'bg-yellow-50 text-yellow-700 ring-yellow-600/20',
           'in progress': 'bg-blue-50 text-blue-700 ring-blue-600/20',
@@ -305,7 +305,7 @@ export default function Terminations() {
     { 
       key: 'documents', 
       label: t('Documents'),
-      render: (value, row) => value && value.trim() !== '' ? (
+      render: (value : any, row : any) => value && value.trim() !== '' ? (
         <span 
           className="inline-flex items-center rounded-md bg-blue-50 px-2 py-1 text-xs font-medium text-blue-700 ring-1 ring-inset ring-blue-600/20 cursor-pointer"
           onClick={(e) => {

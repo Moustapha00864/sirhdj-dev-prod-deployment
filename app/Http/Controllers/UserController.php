@@ -17,7 +17,7 @@ class UserController extends BaseController
      */
     public function index(Request $request)
     {
-        $authUser     = Auth::user();
+        $authUser = Auth::user();
         $authUserRole = $authUser->roles->first()?->name;
         // Allow superadmin, admin, product-manager, contact-manager, viewer
         if (!$authUser->hasPermissionTo('view-users')) {
@@ -54,7 +54,7 @@ class UserController extends BaseController
         }
 
         // Handle pagination
-        $perPage = $request->has('per_page') ? (int)$request->per_page : 10;
+        $perPage = $request->has('per_page') ? (int) $request->per_page : 10;
         $users = $userQuery->where('type', '!=', 'employee')->paginate($perPage)->withQueryString();
 
         # Roles listing - Get all roles without filtering
@@ -65,25 +65,24 @@ class UserController extends BaseController
         }
 
         // Get plan limits for company users and staff users (only in SaaS mode)
-       // Get plan limits for company users and staff users (only in SaaS mode, unlimited)
+        // Get plan limits for company users and staff users (only in SaaS mode, unlimited)
         $planLimits = null;
         if (isSaas()) {
             if ($authUser->type === 'company' && $authUser->plan) {
                 $currentUserCount = User::whereIn('created_by', getCompanyAndUsersId())
-                                        ->where('type', '!=', 'employee')
-                                        ->count();
+                    ->where('type', '!=', 'employee')
+                    ->count();
                 $planLimits = [
                     'current_users' => $currentUserCount,
                     'max_users' => PHP_INT_MAX, // illimité
                     'can_create' => true       // toujours autorisé
                 ];
-            }
-            elseif ($authUser->type !== 'superadmin' && $authUser->created_by) {
+            } elseif ($authUser->type !== 'superadmin' && $authUser->created_by) {
                 $companyUser = User::find($authUser->created_by);
                 if ($companyUser && $companyUser->type === 'company' && $companyUser->plan) {
                     $currentUserCount = User::whereIn('created_by', getCompanyAndUsersId())
-                                            ->where('type', '!=', 'employee')
-                                            ->count();
+                        ->where('type', '!=', 'employee')
+                        ->count();
                     $planLimits = [
                         'current_users' => $currentUserCount,
                         'max_users' => PHP_INT_MAX, // illimité
@@ -98,14 +97,15 @@ class UserController extends BaseController
         return Inertia::render('users/index', [
             'users' => $users,
             'roles' => $roles,
+            'departments' => \App\Models\Department::all(),
             'planLimits' => $planLimits,
             'filters' => [
-                'search' => $request->search ?? '',
-                'role' => $request->role ?? 'all',
-                'per_page' => $perPage,
-                'sort_field' => $request->sort_field ?? 'created_at',
-                'sort_direction' => $request->sort_direction ?? 'desc',
-            ],
+                    'search' => $request->search ?? '',
+                    'role' => $request->role ?? 'all',
+                    'per_page' => $perPage,
+                    'sort_field' => $request->sort_field ?? 'created_at',
+                    'sort_direction' => $request->sort_direction ?? 'desc',
+                ],
         ]);
     }
 
@@ -124,12 +124,12 @@ class UserController extends BaseController
         if (isSaas()) {
             $planLimits = [
                 'current_users' => User::whereIn('created_by', getCompanyAndUsersId())
-                                       ->where('type', '!=', 'employee')
-                                       ->count(),
+                    ->where('type', '!=', 'employee')
+                    ->count(),
                 'max_users' => PHP_INT_MAX,
                 'can_create' => true
             ];
-}
+        }
 
         if (!in_array(auth()->user()->type, ['superadmin', 'company'])) {
             $created_by = auth()->user()->created_by;
@@ -138,11 +138,11 @@ class UserController extends BaseController
         }
 
         $user = User::create([
-            'name'       => $request->name,
-            'email'      => $request->email,
-            'password'   => Hash::make($request->password),
+            'name' => $request->name,
+            'email' => $request->email,
+            'password' => Hash::make($request->password),
             'created_by' => creatorId(),
-            'lang'       => $userLang,
+            'lang' => $userLang,
         ]);
 
         if ($user && $request->roles) {
@@ -153,6 +153,21 @@ class UserController extends BaseController
             $user->roles()->sync([$role->id]);
             $user->type = $role->name;
             $user->save();
+
+            // Handle department assignment
+            if ($request->department_id && $request->approval_level) {
+                $department = \App\Models\Department::find($request->department_id);
+                if ($department) {
+                    if ($request->approval_level == 1) {
+                        $department->manager_id = $user->id;
+                    } elseif ($request->approval_level == 2) {
+                        $department->validator2_id = $user->id;
+                    } elseif ($request->approval_level == 4) {
+                        $department->director_id = $user->id;
+                    }
+                    $department->save();
+                }
+            }
 
             // Trigger email notification
             event(new \App\Events\UserCreated($user, $request->password));
@@ -173,7 +188,7 @@ class UserController extends BaseController
     public function update(UserRequest $request, User $user)
     {
         if ($user) {
-            $user->name  = $request->name;
+            $user->name = $request->name;
             $user->email = $request->email;
 
             // find and syncing role
@@ -191,6 +206,22 @@ class UserController extends BaseController
             }
 
             $user->save();
+
+            // Handle department assignment
+            if ($request->department_id && $request->approval_level) {
+                $department = \App\Models\Department::find($request->department_id);
+                if ($department) {
+                    if ($request->approval_level == 1) {
+                        $department->manager_id = $user->id;
+                    } elseif ($request->approval_level == 2) {
+                        $department->validator2_id = $user->id;
+                    } elseif ($request->approval_level == 4) {
+                        $department->director_id = $user->id;
+                    }
+                    $department->save();
+                }
+            }
+
             return redirect()->route('users.index')->with('success', __('User updated with roles'));
         }
         return redirect()->back()->with('error', __('Unable to update User. Please try again!'));
