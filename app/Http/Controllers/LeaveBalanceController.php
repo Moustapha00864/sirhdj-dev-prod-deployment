@@ -24,9 +24,9 @@ class LeaveBalanceController extends Controller
                 $q->whereHas('employee', function ($subQ) use ($request) {
                     $subQ->where('name', 'like', '%' . $request->search . '%');
                 })
-                ->orWhereHas('leaveType', function ($subQ) use ($request) {
-                    $subQ->where('name', 'like', '%' . $request->search . '%');
-                });
+                    ->orWhereHas('leaveType', function ($subQ) use ($request) {
+                        $subQ->where('name', 'like', '%' . $request->search . '%');
+                    });
             });
         }
 
@@ -222,5 +222,34 @@ class LeaveBalanceController extends Controller
         } else {
             return redirect()->back()->with('error', __('Leave balance Not Found.'));
         }
+    }
+
+    public function getEmployeeBalances($employeeId)
+    {
+        // Fetch leave balances for a specific employee
+        $balances = LeaveBalance::where('employee_id', $employeeId)
+            ->whereIn('created_by', getCompanyAndUsersId())
+            ->with(['leaveType', 'leavePolicy'])
+            ->orderBy('year', 'desc')
+            ->get()
+            ->map(function ($balance) {
+                return [
+                    'id' => $balance->id,
+                    'year' => $balance->year,
+                    'leave_type' => [
+                        'id' => $balance->leaveType->id,
+                        'name' => $balance->leaveType->name,
+                        'color' => $balance->leaveType->color,
+                    ],
+                    'allocated_days' => $balance->allocated_days,
+                    'used_days' => $balance->used_days,
+                    'remaining_days' => $balance->remaining_days,
+                    'carried_forward' => $balance->carried_forward,
+                    'manual_adjustment' => $balance->manual_adjustment,
+                    'adjustment_reason' => $balance->adjustment_reason,
+                ];
+            });
+
+        return response()->json($balances);
     }
 }

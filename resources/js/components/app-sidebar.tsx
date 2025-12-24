@@ -727,6 +727,13 @@ export function AppSidebar() {
             });
         }
 
+        if (hasPermission(permissions, 'manage-leave-settings')) {
+            leaveChildren.push({
+                title: t('Global Settings'),
+                href: route('hr.leave-settings.index')
+            });
+        }
+
         if (leaveChildren.length > 0) {
             items.push({
                 title: t('Leave Management'),

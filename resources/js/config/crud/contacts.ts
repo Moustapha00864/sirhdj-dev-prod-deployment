@@ -12,7 +12,8 @@ export const contactsConfig: CrudConfig = {
       create: 'create-contacts',
       edit: 'edit-contacts',
       delete: 'delete-contacts'
-    }
+    },
+    breadcrumbs: []
   },
   table: {
     columns: [

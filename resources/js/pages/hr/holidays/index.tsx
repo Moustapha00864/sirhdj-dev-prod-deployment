@@ -20,7 +20,7 @@ export default function Holidays() {
   const { t } = useTranslation();
   const { auth, holidays, branches, categories, years, filters: pageFilters = {} } = usePage().props as any;
   const permissions = auth?.permissions || [];
-  
+
   // State
   const [searchTerm, setSearchTerm] = useState(pageFilters.search || '');
   const [selectedCategory, setSelectedCategory] = useState(pageFilters.category || '');
@@ -33,34 +33,34 @@ export default function Holidays() {
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
   const [currentItem, setCurrentItem] = useState<any>(null);
   const [formMode, setFormMode] = useState<'create' | 'edit' | 'view'>('create');
-  
+
   // Check if any filters are active
   const hasActiveFilters = () => {
-    return selectedCategory !== '' || 
-           selectedBranch !== '' ||
-           selectedYear !== new Date().getFullYear().toString() ||
-           dateFrom !== '' || 
-           dateTo !== '' || 
-           searchTerm !== '';
+    return selectedCategory !== '' ||
+      selectedBranch !== '' ||
+      selectedYear !== new Date().getFullYear().toString() ||
+      dateFrom !== '' ||
+      dateTo !== '' ||
+      searchTerm !== '';
   };
-  
+
   // Count active filters
   const activeFilterCount = () => {
-    return (selectedCategory !== '' ? 1 : 0) + 
-           (selectedBranch !== '' ? 1 : 0) +
-           (selectedYear !== new Date().getFullYear().toString() ? 1 : 0) +
-           (dateFrom !== '' ? 1 : 0) + 
-           (dateTo !== '' ? 1 : 0) + 
-           (searchTerm !== '' ? 1 : 0);
+    return (selectedCategory !== '' ? 1 : 0) +
+      (selectedBranch !== '' ? 1 : 0) +
+      (selectedYear !== new Date().getFullYear().toString() ? 1 : 0) +
+      (dateFrom !== '' ? 1 : 0) +
+      (dateTo !== '' ? 1 : 0) +
+      (searchTerm !== '' ? 1 : 0);
   };
-  
+
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     applyFilters();
   };
-  
+
   const applyFilters = () => {
-    router.get(route('hr.holidays.index'), { 
+    router.get(route('hr.holidays.index'), {
       page: 1,
       search: searchTerm || undefined,
       category: selectedCategory || undefined,
@@ -71,13 +71,13 @@ export default function Holidays() {
       per_page: pageFilters.per_page
     }, { preserveState: true, preserveScroll: true });
   };
-  
+
   const handleSort = (field: string) => {
     const direction = pageFilters.sort_field === field && pageFilters.sort_direction === 'asc' ? 'desc' : 'asc';
-    
-    router.get(route('hr.holidays.index'), { 
-      sort_field: field, 
-      sort_direction: direction, 
+
+    router.get(route('hr.holidays.index'), {
+      sort_field: field,
+      sort_direction: direction,
       page: 1,
       search: searchTerm || undefined,
       category: selectedCategory || undefined,
@@ -88,10 +88,10 @@ export default function Holidays() {
       per_page: pageFilters.per_page
     }, { preserveState: true, preserveScroll: true });
   };
-  
+
   const handleAction = (action: string, item: any) => {
     setCurrentItem(item);
-    
+
     switch (action) {
       case 'view':
         setFormMode('view');
@@ -106,19 +106,19 @@ export default function Holidays() {
         break;
     }
   };
-  
+
   const handleAddNew = () => {
     setCurrentItem(null);
     setFormMode('create');
     setIsFormModalOpen(true);
   };
-  
+
   const handleFormSubmit = (formData: any) => {
     if (formMode === 'create') {
       toast.loading(t('Creating holiday...'));
 
       router.post(route('hr.holidays.store'), formData, {
-        onSuccess: (page) => {
+        onSuccess: (page: any) => {
           setIsFormModalOpen(false);
           toast.dismiss();
           if (page.props.flash.success) {
@@ -142,7 +142,7 @@ export default function Holidays() {
       toast.loading(t('Updating holiday...'));
 
       router.put(route('hr.holidays.update', currentItem.id), formData, {
-        onSuccess: (page) => {
+        onSuccess: (page: any) => {
           setIsFormModalOpen(false);
           toast.dismiss();
           if (page.props.flash.success) {
@@ -164,12 +164,12 @@ export default function Holidays() {
       });
     }
   };
-  
+
   const handleDeleteConfirm = () => {
     toast.loading(t('Deleting holiday...'));
-    
+
     router.delete(route('hr.holidays.destroy', currentItem.id), {
-      onSuccess: (page) => {
+      onSuccess: (page: any) => {
         setIsDeleteModalOpen(false);
         toast.dismiss();
         if (page.props.flash.success) {
@@ -190,7 +190,7 @@ export default function Holidays() {
       }
     });
   };
-  
+
   const handleResetFilters = () => {
     setSearchTerm('');
     setSelectedCategory('');
@@ -199,7 +199,7 @@ export default function Holidays() {
     setDateFrom('');
     setDateTo('');
     setShowFilters(false);
-    
+
     router.get(route('hr.holidays.index'), {
       page: 1,
       year: new Date().getFullYear().toString(),
@@ -224,7 +224,7 @@ export default function Holidays() {
       ...(selectedCategory && { category: selectedCategory }),
       ...(selectedBranch && { branch_id: selectedBranch })
     });
-    
+
     window.open(`${route('hr.holidays.export.pdf')}?${params.toString()}`, '_blank');
   };
 
@@ -234,13 +234,13 @@ export default function Holidays() {
       ...(selectedCategory && { category: selectedCategory }),
       ...(selectedBranch && { branch_id: selectedBranch })
     });
-    
+
     window.open(`${route('hr.holidays.export.ical')}?${params.toString()}`, '_blank');
   };
 
   // Define page actions
-  const pageActions = [];
-  
+  const pageActions: any[] = [];
+
   // Add the "View Calendar" button
   pageActions.push({
     label: t('Calendar View'),
@@ -248,7 +248,7 @@ export default function Holidays() {
     variant: 'outline',
     onClick: handleViewCalendar
   });
-  
+
   // Add export buttons
   pageActions.push({
     label: t('Export PDF'),
@@ -256,14 +256,14 @@ export default function Holidays() {
     variant: 'outline',
     onClick: handleExportPdf
   });
-  
+
   pageActions.push({
     label: t('Export iCal'),
     icon: <Download className="h-4 w-4 mr-2" />,
     variant: 'outline',
     onClick: handleExportIcal
   });
-  
+
   // Add the "Add New Holiday" button if user has permission
   if (hasPermission(permissions, 'create-holidays')) {
     pageActions.push({
@@ -282,17 +282,17 @@ export default function Holidays() {
 
   // Define table columns
   const columns = [
-    { 
-      key: 'name', 
+    {
+      key: 'name',
       label: t('Holiday Name'),
       sortable: true,
-      render: (value) => value || '-'
+      render: (value: any) => value || '-'
     },
-    { 
-      key: 'date', 
+    {
+      key: 'date',
       label: t('Date'),
       sortable: true,
-      render: (_, row) => {
+      render: (_: any, row: any) => {
         if (row.end_date && row.start_date !== row.end_date) {
           return (
             <div>
@@ -308,19 +308,19 @@ export default function Holidays() {
         return window.appSettings?.formatDateTime(row.start_date, false) || new Date(row.start_date).toLocaleDateString();
       }
     },
-    { 
-      key: 'category', 
+    {
+      key: 'category',
       label: t('Category'),
-      render: (value) => {
+      render: (value: any) => {
         const categoryClasses = {
           'national': 'bg-blue-50 text-blue-700 ring-blue-600/20',
           'religious': 'bg-purple-50 text-purple-700 ring-purple-600/20',
           'company-specific': 'bg-green-50 text-green-700 ring-green-600/20',
           'regional': 'bg-amber-50 text-amber-700 ring-amber-600/20'
         };
-        
+
         const categoryClass = categoryClasses[value] || 'bg-gray-50 text-gray-700 ring-gray-600/20';
-        
+
         return (
           <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset ${categoryClass}`}>
             {value.charAt(0).toUpperCase() + value.slice(1)}
@@ -328,12 +328,12 @@ export default function Holidays() {
         );
       }
     },
-    { 
-      key: 'branches', 
+    {
+      key: 'branches',
       label: t('Branches'),
-      render: (_, row) => {
+      render: (_: any, row: any) => {
         if (!row.branches || row.branches.length === 0) return '-';
-        
+
         if (row.branches.length <= 2) {
           return (
             <div className="flex flex-wrap gap-1">
@@ -343,7 +343,7 @@ export default function Holidays() {
             </div>
           );
         }
-        
+
         return (
           <div className="flex flex-wrap gap-1">
             <Badge variant="outline">{row.branches[0].name}</Badge>
@@ -352,12 +352,12 @@ export default function Holidays() {
         );
       }
     },
-    { 
-      key: 'type', 
+    {
+      key: 'type',
       label: t('Type'),
-      render: (_, row) => {
+      render: (_: any, row: any) => {
         const badges = [];
-        
+
         if (row.is_recurring) {
           badges.push(
             <Badge key="recurring" variant="secondary" className="bg-indigo-50 text-indigo-700 hover:bg-indigo-50">
@@ -365,7 +365,7 @@ export default function Holidays() {
             </Badge>
           );
         }
-        
+
         if (row.is_half_day) {
           badges.push(
             <Badge key="half-day" variant="secondary" className="bg-orange-50 text-orange-700 hover:bg-orange-50">
@@ -373,7 +373,7 @@ export default function Holidays() {
             </Badge>
           );
         }
-        
+
         if (row.is_paid) {
           badges.push(
             <Badge key="paid" variant="secondary" className="bg-green-50 text-green-700 hover:bg-green-50">
@@ -387,7 +387,7 @@ export default function Holidays() {
             </Badge>
           );
         }
-        
+
         return (
           <div className="flex flex-wrap gap-1">
             {badges}
@@ -395,33 +395,33 @@ export default function Holidays() {
         );
       }
     },
-    { 
-      key: 'description', 
+    {
+      key: 'description',
       label: t('Description'),
-      render: (value) => value || '-'
+      render: (value: any) => value || '-'
     }
   ];
 
   // Define table actions
   const actions = [
-    { 
-      label: t('View'), 
-      icon: 'Eye', 
-      action: 'view', 
+    {
+      label: t('View'),
+      icon: 'Eye',
+      action: 'view',
       className: 'text-blue-500',
       requiredPermission: 'view-holidays'
     },
-    { 
-      label: t('Edit'), 
-      icon: 'Edit', 
-      action: 'edit', 
+    {
+      label: t('Edit'),
+      icon: 'Edit',
+      action: 'edit',
       className: 'text-amber-500',
       requiredPermission: 'edit-holidays'
     },
-    { 
-      label: t('Delete'), 
-      icon: 'Trash2', 
-      action: 'delete', 
+    {
+      label: t('Delete'),
+      icon: 'Trash2',
+      action: 'delete',
       className: 'text-red-500',
       requiredPermission: 'delete-holidays'
     }
@@ -462,8 +462,9 @@ export default function Holidays() {
   ];
 
   return (
-    <PageTemplate 
-      title={t("Holidays")} 
+    <PageTemplate
+      title={t("Holidays")}
+      description={t("Manage hospital public holidays and branch exceptions")}
       url="/hr/holidays"
       actions={pageActions}
       breadcrumbs={breadcrumbs}
@@ -523,8 +524,8 @@ export default function Holidays() {
           onApplyFilters={applyFilters}
           currentPerPage={pageFilters.per_page?.toString() || "10"}
           onPerPageChange={(value) => {
-            router.get(route('hr.holidays.index'), { 
-              page: 1, 
+            router.get(route('hr.holidays.index'), {
+              page: 1,
               per_page: parseInt(value),
               search: searchTerm || undefined,
               category: selectedCategory || undefined,
@@ -575,56 +576,56 @@ export default function Holidays() {
         onSubmit={handleFormSubmit}
         formConfig={{
           fields: [
-            { 
-              name: 'name', 
-              label: t('Holiday Name'), 
+            {
+              name: 'name',
+              label: t('Holiday Name'),
               type: 'text',
               required: true
             },
-            { 
-              name: 'category', 
-              label: t('Category'), 
+            {
+              name: 'category',
+              label: t('Category'),
               type: 'select',
               required: true,
               options: categoryFormOptions
             },
-            { 
-              name: 'start_date', 
-              label: t('Start Date'), 
-              type: 'date', 
-              required: true 
+            {
+              name: 'start_date',
+              label: t('Start Date'),
+              type: 'date',
+              required: true
             },
-            { 
-              name: 'end_date', 
-              label: t('End Date'), 
+            {
+              name: 'end_date',
+              label: t('End Date'),
               type: 'date',
               helpText: t('Leave empty for single-day holiday')
             },
-            { 
-              name: 'description', 
-              label: t('Description'), 
-              type: 'textarea' 
+            {
+              name: 'description',
+              label: t('Description'),
+              type: 'textarea'
             },
-            { 
-              name: 'is_recurring', 
-              label: t('Recurring Annual Holiday'), 
+            {
+              name: 'is_recurring',
+              label: t('Recurring Annual Holiday'),
               type: 'checkbox',
               helpText: t('This holiday repeats every year on the same date')
             },
-            { 
-              name: 'is_paid', 
-              label: t('Paid Holiday'), 
+            {
+              name: 'is_paid',
+              label: t('Paid Holiday'),
               type: 'checkbox',
               defaultValue: true
             },
-            { 
-              name: 'is_half_day', 
-              label: t('Half Day'), 
+            {
+              name: 'is_half_day',
+              label: t('Half Day'),
               type: 'checkbox'
             },
-            { 
-              name: 'branch_ids', 
-              label: t('Applicable Branches'), 
+            {
+              name: 'branch_ids',
+              label: t('Applicable Branches'),
               type: 'multi-select',
               required: true,
               options: branchOptions.filter(opt => opt.value !== '')

@@ -20,6 +20,8 @@ class LeaveBalance extends BaseModel
         'carried_forward',
         'manual_adjustment',
         'adjustment_reason',
+        'initial_leave_balance',
+        'carry_over_years',
         'created_by'
     ];
 
@@ -29,6 +31,8 @@ class LeaveBalance extends BaseModel
         'remaining_days' => 'decimal:2',
         'carried_forward' => 'decimal:2',
         'manual_adjustment' => 'decimal:2',
+        'initial_leave_balance' => 'decimal:2',
+        'carry_over_years' => 'integer',
     ];
 
     /**
@@ -61,6 +65,14 @@ class LeaveBalance extends BaseModel
     public function creator()
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    /**
+     * Get the movements for this balance.
+     */
+    public function movements()
+    {
+        return $this->hasMany(LeaveMovement::class);
     }
 
     /**

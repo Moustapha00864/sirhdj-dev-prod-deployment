@@ -2,7 +2,8 @@
 import { useState } from 'react';
 import { PageTemplate } from '@/components/page-template';
 import { usePage, router } from '@inertiajs/react';
-import { Plus, Settings } from 'lucide-react';
+import { Plus, Settings, History } from 'lucide-react';
+import { format } from 'date-fns';
 import { hasPermission } from '@/utils/authorization';
 import { CrudTable } from '@/components/CrudTable';
 import { CrudFormModal } from '@/components/CrudFormModal';
@@ -26,6 +27,9 @@ export default function LeaveBalances() {
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isAdjustModalOpen, setIsAdjustModalOpen] = useState(false);
+  const [isMovementsModalOpen, setIsMovementsModalOpen] = useState(false);
+  const [movements, setMovements] = useState<any[]>([]);
+  const [isLoadingMovements, setIsLoadingMovements] = useState(false);
   const [currentItem, setCurrentItem] = useState<any>(null);
   const [formMode, setFormMode] = useState<'create' | 'edit' | 'view'>('create');
 
@@ -88,6 +92,24 @@ export default function LeaveBalances() {
       case 'adjust':
         setIsAdjustModalOpen(true);
         break;
+      case 'history':
+        handleFetchMovements(item.id);
+        break;
+    }
+  };
+
+  const handleFetchMovements = async (balanceId: number) => {
+    setIsLoadingMovements(true);
+    setIsMovementsModalOpen(true);
+    try {
+      const response = await fetch(route('hr.leave-balances.movements', balanceId));
+      const data = await response.json();
+      setMovements(data);
+    } catch (error) {
+      console.error('Failed to fetch movements:', error);
+      toast.error(t('Failed to load adjustment history'));
+    } finally {
+      setIsLoadingMovements(false);
     }
   };
 
@@ -102,7 +124,7 @@ export default function LeaveBalances() {
       toast.loading(t('Creating leave balance...'));
 
       router.post(route('hr.leave-balances.store'), formData, {
-        onSuccess: (page) => {
+        onSuccess: (page: any) => {
           setIsFormModalOpen(false);
           toast.dismiss();
           if (page.props.flash.success) {
@@ -124,7 +146,7 @@ export default function LeaveBalances() {
       toast.loading(t('Updating leave balance...'));
 
       router.put(route('hr.leave-balances.update', currentItem.id), formData, {
-        onSuccess: (page) => {
+        onSuccess: (page: any) => {
           setIsFormModalOpen(false);
           toast.dismiss();
           if (page.props.flash.success) {
@@ -149,7 +171,7 @@ export default function LeaveBalances() {
     toast.loading(t('Deleting leave balance...'));
 
     router.delete(route('hr.leave-balances.destroy', currentItem.id), {
-      onSuccess: (page) => {
+      onSuccess: (page: any) => {
         setIsDeleteModalOpen(false);
         toast.dismiss();
         if (page.props.flash.success) {
@@ -173,7 +195,7 @@ export default function LeaveBalances() {
     toast.loading(t('Adjusting leave balance...'));
 
     router.put(route('hr.leave-balances.adjust', currentItem.id), formData, {
-      onSuccess: (page) => {
+      onSuccess: (page: any) => {
         setIsAdjustModalOpen(false);
         toast.dismiss();
         if (page.props.flash.success) {
@@ -214,7 +236,7 @@ export default function LeaveBalances() {
     pageActions.push({
       label: t('Add Leave Balance'),
       icon: <Plus className="h-4 w-4 mr-2" />,
-      variant: 'default',
+      variant: 'default' as const,
       onClick: () => handleAddNew()
     });
   }
@@ -237,7 +259,7 @@ export default function LeaveBalances() {
       label: t('Leave Type'),
       render: (value: any, row: any) => (
         <div className="flex items-center gap-2">
-          <div 
+          <div
             className="w-3 h-3 rounded-full"
             style={{ backgroundColor: row.leave_type?.color }}
           />
@@ -318,6 +340,13 @@ export default function LeaveBalances() {
       requiredPermission: 'adjust-leave-balances'
     },
     {
+      label: t('History'),
+      icon: 'History',
+      action: 'history',
+      className: 'text-indigo-500',
+      requiredPermission: 'view-leave-balances'
+    },
+    {
       label: t('Delete'),
       icon: 'Trash2',
       action: 'delete',
@@ -354,6 +383,7 @@ export default function LeaveBalances() {
   return (
     <PageTemplate
       title={t("Leave Balance Management")}
+      description={t("Track and adjust employee leave allocations and usage history")}
       url="/hr/leave-balances"
       actions={pageActions}
       breadcrumbs={breadcrumbs}
@@ -513,6 +543,68 @@ export default function LeaveBalances() {
         itemName={`${currentItem?.employee?.name} - ${currentItem?.leave_type?.name} (${currentItem?.year})` || ''}
         entityName="leave balance"
       />
+      <MovementLogsModal
+        isOpen={isMovementsModalOpen}
+        onClose={() => setIsMovementsModalOpen(false)}
+        movements={movements}
+        isLoading={isLoadingMovements}
+        balanceInfo={currentItem ? `${currentItem.employee?.name} - ${currentItem.leave_type?.name} (${currentItem.year})` : ''}
+      />
     </PageTemplate>
+  );
+}
+
+function MovementLogsModal({ isOpen, onClose, movements, isLoading, balanceInfo }: any) {
+  const { t } = useTranslation();
+
+  return (
+    <CrudFormModal
+      isOpen={isOpen}
+      onClose={onClose}
+      title={`${t('Adjustment History')}: ${balanceInfo}`}
+      mode="view"
+      contentOnly
+    >
+      <div className="py-4">
+        {isLoading ? (
+          <div className="flex justify-center py-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+          </div>
+        ) : movements.length === 0 ? (
+          <div className="text-center py-8 text-gray-500 italic">
+            {t('No adjustment history found for this balance.')}
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {movements.map((movement: any) => (
+              <div key={movement.id} className="border-l-4 border-primary bg-gray-50 dark:bg-gray-800 p-4 rounded-r-lg shadow-sm">
+                <div className="flex justify-between items-start mb-2">
+                  <div className="flex items-center gap-2">
+                    <span className={`text-sm font-bold ${movement.amount > 0 ? 'text-green-600' : 'text-red-600'}`}>
+                      {movement.amount > 0 ? '+' : ''}{movement.amount} {t('days')}
+                    </span>
+                    <span className="text-xs px-2 py-0.5 rounded-full bg-gray-200 text-gray-700 dark:bg-gray-700 dark:text-gray-300">
+                      {t(movement.type)}
+                    </span>
+                  </div>
+                  <span className="text-xs text-gray-500">
+                    {format(new Date(movement.created_at), 'dd MMM yyyy HH:mm')}
+                  </span>
+                </div>
+                <p className="text-sm text-gray-700 dark:text-gray-300 mb-2 italic">
+                  "{movement.reason || t('No reason provided')}"
+                </p>
+                <div className="text-[10px] text-gray-500 flex items-center gap-1">
+                  <span>{t('By')}:</span>
+                  <span className="font-medium text-gray-700 dark:text-gray-300">
+                    {movement.creator?.name || t('System')}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </CrudFormModal>
   );
 }

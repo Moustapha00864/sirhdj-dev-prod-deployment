@@ -13,14 +13,14 @@ export interface SharedData {
 export interface NavItem {
     title: string;
     href?: string;
-    icon?: React.ReactNode;
+    icon?: LucideIcon;
     permission?: string;
     children?: NavItem[];
     target?: string;
     external?: boolean;
     defaultOpen?: boolean;
     badge?: {
-        label: string;
+        label: string | number;
         variant?: 'default' | 'destructive' | 'outline' | 'secondary' | 'ghost';
     };
 }

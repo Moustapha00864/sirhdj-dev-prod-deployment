@@ -71,7 +71,7 @@ export interface FileValidation {
 export interface FormField {
   name: string;
   label: string;
-  type: 'text' | 'email' | 'password' | 'select' | 'textarea' | 'radio' | 'checkbox' | 'switch' | 'file' | 'date' | 'number' | 'multi-select' | 'media-picker' | 'custom' | 'dependent-dropdown';
+  type: 'text' | 'email' | 'password' | 'select' | 'textarea' | 'radio' | 'checkbox' | 'switch' | 'file' | 'date' | 'time' | 'color' | 'number' | 'multi-select' | 'media-picker' | 'custom' | 'dependent-dropdown';
   placeholder?: string;
   required?: boolean;
   multiple?: boolean; // For media-picker and multi-select fields
@@ -99,11 +99,15 @@ export interface FormField {
     name: string;
     label: string;
     multiple?: boolean;
-    options?: { value: string | number; label: string }[];
-    dependencies?: Record<string, { value: string | number; label: string }[]>;
+    options?: { value: string; label: string }[];
+    dependencies?: Record<string, { value: string; label: string }[]>;
     apiEndpoint?: string;
   }>;
-  onDependentChange?: (fieldName: string, value: string, formData: Record<string, any>) => void;
+  defaultValue?: any;
+  min?: number;
+  max?: number;
+  step?: number;
+  onDependentChange?: (fieldName: string, value: string, formData: Record<string, any>, additionalData?: any) => void;
 }
 
 export interface FormConfig {

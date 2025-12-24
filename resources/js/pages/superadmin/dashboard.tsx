@@ -17,13 +17,13 @@ interface SuperAdminDashboardData {
     pendingRequests: number;
     monthlyGrowth: number;
   };
-  }>;
-  topPlans: Array<{
-    name: string;
-    subscribers: number;
-    revenue: number;
-  }>;
-}
+};
+topPlans: Array<{
+  name: string;
+  subscribers: number;
+  revenue: number;
+}>;
+
 
 interface PageAction {
   label: string;
@@ -72,11 +72,10 @@ export default function SuperAdminDashboard({ dashboardData }: { dashboardData: 
   ];
 
   return (
-    <PageTemplate 
+    <PageTemplate
       title={t('Dashboard')}
       url="/dashboard"
-      actions={pageActions}
-    >
+      actions={pageActions} description={''}  >
       <div className="space-y-6">
         {/* Key Metrics */}
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
@@ -121,7 +120,7 @@ export default function SuperAdminDashboard({ dashboardData }: { dashboardData: 
               </div>
             </CardContent>
           </Card>
-          
+
           <Card>
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
@@ -164,45 +163,44 @@ export default function SuperAdminDashboard({ dashboardData }: { dashboardData: 
             </CardContent>
           </Card>
 
-          
+
         </div>
 
 
-          {/* Top Plans */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Ticket className="h-5 w-5" />
-                {t('Top Performing Plans')}
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {topPlans.map((plan, index) => (
-                  <div key={plan.name} className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-                        <span className="text-sm font-bold text-primary">#{index + 1}</span>
-                      </div>
-                      <div>
-                        <p className="font-medium">{plan.name}</p>
-                        <p className="text-sm text-muted-foreground">{plan.subscribers} subscribers</p>
-                      </div>
+        {/* Top Plans */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Ticket className="h-5 w-5" />
+              {t('Top Performing Plans')}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {topPlans.map((plan: any, index: any) => (
+                <div key={plan.name} className="flex items-center justify-between p-3 rounded-lg bg-muted/50">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
+                      <span className="text-sm font-bold text-primary">#{index + 1}</span>
                     </div>
-                    <div className="text-right">
-                      <p className="font-semibold">${plan.revenue.toLocaleString()}</p>
-                      <p className="text-xs text-muted-foreground">revenue</p>
+                    <div>
+                      <p className="font-medium">{plan.name}</p>
+                      <p className="text-sm text-muted-foreground">{plan.subscribers} subscribers</p>
                     </div>
                   </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Feature Overview */}
-        <DashboardOverview userType="superadmin" stats={stats} />
+                  <div className="text-right">
+                    <p className="font-semibold">${plan.revenue.toLocaleString()}</p>
+                    <p className="text-xs text-muted-foreground">revenue</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
       </div>
+
+      {/* Feature Overview */}
+      <DashboardOverview userType="superadmin" stats={stats} />
     </PageTemplate>
   );
 }
