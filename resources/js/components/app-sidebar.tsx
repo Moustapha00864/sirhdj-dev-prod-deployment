@@ -106,6 +106,11 @@ export function AppSidebar() {
             title: t('Settings'),
             href: route('settings'),
             icon: Settings,
+        },
+        {
+            title: t('Reports'),
+            href: route('hr.reports.index'),
+            icon: BarChart,
         }
     ];
 
@@ -120,7 +125,11 @@ export function AppSidebar() {
             });
         }
 
-
+        items.push({
+            title: t('Reports'),
+            href: route('hr.reports.index'),
+            icon: BarChart,
+        });
 
         // Staff section - only show if user has any staff-related permissions
         const staffChildren = [];

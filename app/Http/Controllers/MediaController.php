@@ -119,7 +119,7 @@ class MediaController extends Controller
             : __('Please check storage settings');
 
         $validator = Validator::make($request->all(), [
-            'files' => 'required|array',
+            'files' => 'nullable|array',
             'files.*' => array_merge(['file'], $validationRules),
         ], [
             'files.*.mimes' => __('Only specified file types are allowed: :types', [
@@ -380,7 +380,7 @@ class MediaController extends Controller
     public function createDirectory(Request $request)
     {
         $request->validate([
-            'name' => 'required|string|max:255',
+            'name' => 'nulable|string|max:255',
         ]);
 
         $slug = Str::slug($request->name . '-' . time());

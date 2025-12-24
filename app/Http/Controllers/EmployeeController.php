@@ -24,7 +24,7 @@ class EmployeeController extends Controller
      */
     public function index(Request $request)
     {
-        $authUser     = Auth::user();
+        $authUser = Auth::user();
         $query = User::withPermissionCheck()
             ->with(['employee.branch', 'employee.department', 'employee.designation'])
             ->where('type', 'employee');
@@ -92,40 +92,38 @@ class EmployeeController extends Controller
             ->get(['id', 'name', 'department_id']);
 
 
-                   // Get plan limits for company users and staff users (only in SaaS mode)
-            $planLimits = null;
-            
-            if (isSaas()) {
-            
-                if ($authUser->type === 'company' && $authUser->plan) {
+        // Get plan limits for company users and staff users (only in SaaS mode)
+        $planLimits = null;
+
+        if (isSaas()) {
+
+            if ($authUser->type === 'company' && $authUser->plan) {
+                $currentUserCount = User::where('type', 'employee')->whereIn('created_by', getCompanyAndUsersId())->count();
+                $planLimits = [
+                    'current_users' => $currentUserCount,
+                    'max_users' => $authUser->plan->max_employees,
+                    'can_create' => true // <<< LIMITE DÉSACTIVÉE
+                ];
+            } elseif ($authUser->type !== 'superadmin' && $authUser->created_by) {
+                $companyUser = User::find($authUser->created_by);
+
+                if ($companyUser && $companyUser->type === 'company' && $companyUser->plan) {
                     $currentUserCount = User::where('type', 'employee')->whereIn('created_by', getCompanyAndUsersId())->count();
                     $planLimits = [
                         'current_users' => $currentUserCount,
-                        'max_users' => $authUser->plan->max_employees,
+                        'max_users' => $companyUser->plan->max_employees,
                         'can_create' => true // <<< LIMITE DÉSACTIVÉE
                     ];
                 }
-            
-                elseif ($authUser->type !== 'superadmin' && $authUser->created_by) {
-                    $companyUser = User::find($authUser->created_by);
-            
-                    if ($companyUser && $companyUser->type === 'company' && $companyUser->plan) {
-                        $currentUserCount = User::where('type', 'employee')->whereIn('created_by', getCompanyAndUsersId())->count();
-                        $planLimits = [
-                            'current_users' => $currentUserCount,
-                            'max_users' => $companyUser->plan->max_employees,
-                            'can_create' => true // <<< LIMITE DÉSACTIVÉE
-                        ];
-                    }
-                }
             }
-            if ($planLimits === null) {
-                $planLimits = [
-                    'current_users' => 0,
-                    'max_users' => 999999,
-                    'can_create' => true
-                ];
-            }
+        }
+        if ($planLimits === null) {
+            $planLimits = [
+                'current_users' => 0,
+                'max_users' => 999999,
+                'can_create' => true
+            ];
+        }
 
 
 
@@ -191,12 +189,12 @@ class EmployeeController extends Controller
             $validator = Validator::make($request->all(), [
                 'name' => 'required|string|max:255',
                 'employee_id' => 'required|string|max:255|unique:employees,employee_id',
-                'email' => 'required|email|max:255|unique:users,email',
-                'password' => 'required|string|min:8',
+                'email' => 'nullable|email|max:255|unique:users,email',
+                'password' => 'nullable|string|min:8',
                 'phone' => 'required|string|max:20',
                 'date_of_birth' => 'required|date',
                 'gender' => 'required|in:male,female,other',
-                'profile_image' => 'required',
+                'profile_image' => 'nullable|image|max:2048',
                 'shift_id' => 'nullable|exists:shifts,id',
                 'attendance_policy_id' => 'nullable|exists:attendance_policies,id',
 
@@ -210,17 +208,18 @@ class EmployeeController extends Controller
 
                 // Contact information
                 'address_line_1' => 'required|string|max:255',
-                'address_line_2' => 'required|string|max:255',
+                'address_line_2' => 'nullable|string|max:255',  // optionnel
                 'city' => 'required|string|max:100',
-                'state' => 'required|string|max:100',
+                'state' => 'nullable|string|max:100',           // optionnel
                 'country' => 'required|string|max:100',
-                'postal_code' => 'required|string|max:20',
-                'emergency_contact_name' => 'required|string|max:255',
-                'emergency_contact_relationship' => 'required|string|max:100',
-                'emergency_contact_number' => 'required|string|max:20',
+                'postal_code' => 'nullable|string|max:20',      // optionnel
+                'emergency_contact_name' => 'nullable|string|max:255',
+                'emergency_contact_relationship' => 'nullable|string|max:100',
+                'emergency_contact_number' => 'nullable|string|max:20',
 
-                // Banking information
-                'bank_name' => 'required|string|max:255',
+
+                // Banking Information
+                'bank_name' => 'nullable|string|max:255',
                 'account_holder_name' => 'nullable|string|max:255',
                 'account_number' => 'nullable|string|max:50',
                 'bank_identifier_code' => 'nullable|string|max:50',
@@ -229,8 +228,8 @@ class EmployeeController extends Controller
 
                 // Documents
                 'documents' => 'nullable|array',
-                'documents.*.document_type_id' => 'required|exists:document_types,id',
-                'documents.*.file_path' => 'required|string',
+                'documents.*.document_type_id' => 'nullable|exists:document_types,id',
+                'documents.*.file_path' => 'nullable|string',
                 'documents.*.expiry_date' => 'nullable|date',
             ]);
 
@@ -260,6 +259,7 @@ class EmployeeController extends Controller
             }
 
             // Create Employee model object
+            // Create Employee model object
             $employee = new Employee();
             $employee->user_id = $user->id;
             $employee->employee_id = $request->employee_id;
@@ -272,22 +272,31 @@ class EmployeeController extends Controller
             $employee->date_of_joining = $request->date_of_joining;
             $employee->employment_type = $request->employment_type;
             $employee->address_line_1 = $request->address_line_1;
-            $employee->address_line_2 = $request->address_line_2;
+            $employee->address_line_2 = $request->address_line_2 ?? null;
             $employee->city = $request->city;
-            $employee->state = $request->state;
+            $employee->state = $request->state ?? null;
             $employee->country = $request->country;
-            $employee->postal_code = $request->postal_code;
-            $employee->emergency_contact_name = $request->emergency_contact_name;
-            $employee->emergency_contact_relationship = $request->emergency_contact_relationship;
-            $employee->emergency_contact_number = $request->emergency_contact_number;
-            $employee->bank_name = $request->bank_name;
-            $employee->account_holder_name = $request->account_holder_name;
-            $employee->account_number = $request->account_number;
-            $employee->bank_identifier_code = $request->bank_identifier_code;
-            $employee->bank_branch = $request->bank_branch;
-            $employee->tax_payer_id = $request->tax_payer_id;
+            $employee->postal_code = $request->postal_code ?? null;
+
+            // Contact en cas d'urgence (optionnel)
+            $employee->emergency_contact_name = $request->emergency_contact_name ?? null;
+            $employee->emergency_contact_relationship = $request->emergency_contact_relationship ?? null;
+            $employee->emergency_contact_number = $request->emergency_contact_number ?? null;
+
+            // Banking Information (optionnel)
+            $employee->bank_name = $request->bank_name ?? null;
+            $employee->account_holder_name = $request->account_holder_name ?? null;
+            $employee->account_number = $request->account_number ?? null;
+            $employee->bank_identifier_code = $request->bank_identifier_code ?? null;
+            $employee->bank_branch = $request->bank_branch ?? null;
+            $employee->tax_payer_id = $request->tax_payer_id ?? null;
+
+            // Créé par
             $employee->created_by = creatorId();
+
+            // Enregistrer l'employé
             $employee->save();
+
 
             if (!$employee->save()) {
                 throw new \Exception('Failed to save employee data');
@@ -407,12 +416,12 @@ class EmployeeController extends Controller
             $validator = Validator::make($request->all(), [
                 'name' => 'required|string|max:255',
                 'employee_id' => 'required|string|max:255|unique:employees,employee_id,' . $employee->id,
-                'email' => 'required|email|max:255|unique:users,email,' . $employee->user_id,
+                'email' => 'nullable|email|max:255|unique:users,email,' . $employee->user_id,
                 'password' => 'nullable|string|min:8',
                 'phone' => 'required|string|max:20',
                 'date_of_birth' => 'required|date',
                 'gender' => 'required|in:male,female,other',
-                'profile_image' => 'nullable|max:2048',
+                'profile_image' => 'nullable|image|max:2048',
                 'shift_id' => 'nullable|exists:shifts,id',
                 'attendance_policy_id' => 'nullable|exists:attendance_policies,id',
 
@@ -426,27 +435,27 @@ class EmployeeController extends Controller
 
                 // Contact information
                 'address_line_1' => 'required|string|max:255',
-                'address_line_2' => 'required|string|max:255',
+                'address_line_2' => 'nullable|string|max:255',  // optionnel
                 'city' => 'required|string|max:100',
-                'state' => 'required|string|max:100',
+                'state' => 'nullable|string|max:100',           // optionnel
                 'country' => 'required|string|max:100',
-                'postal_code' => 'required|string|max:20',
-                'emergency_contact_name' => 'required|string|max:255',
-                'emergency_contact_relationship' => 'required|string|max:100',
-                'emergency_contact_number' => 'required|string|max:20',
+                'postal_code' => 'nullable|string|max:20',      // optionnel
+                'emergency_contact_name' => 'nullable|string|max:255',
+                'emergency_contact_relationship' => 'nullable|string|max:100',
+                'emergency_contact_number' => 'nullable|string|max:20',
 
-                // Banking information
-                'bank_name' => 'required|string|max:255',
-                'account_holder_name' => 'required|string|max:255',
-                'account_number' => 'required|string|max:50',
+                // Banking Information
+                'bank_name' => 'nullable|string|max:255',
+                'account_holder_name' => 'nullable|string|max:255',
+                'account_number' => 'nullable|string|max:50',
                 'bank_identifier_code' => 'nullable|string|max:50',
                 'bank_branch' => 'nullable|string|max:255',
                 'tax_payer_id' => 'nullable|string|max:50',
 
                 // Documents
                 'documents' => 'nullable|array',
-                'documents.*.document_type_id' => 'required|exists:document_types,id',
-                'documents.*.file' => 'nullable|max:5120',
+                'documents.*.document_type_id' => 'nullable|exists:document_types,id',
+                'documents.*.file_path' => 'nullable|string',
                 'documents.*.expiry_date' => 'nullable|date',
             ]);
 
@@ -486,20 +495,20 @@ class EmployeeController extends Controller
             $employee->date_of_joining = $request->date_of_joining;
             $employee->employment_type = $request->employment_type;
             $employee->address_line_1 = $request->address_line_1;
-            $employee->address_line_2 = $request->address_line_2;
+            $employee->address_line_2 = $request->address_line_2 ?? null;
             $employee->city = $request->city;
-            $employee->state = $request->state;
+            $employee->state = $request->state ?? null;
             $employee->country = $request->country;
-            $employee->postal_code = $request->postal_code;
-            $employee->emergency_contact_name = $request->emergency_contact_name;
-            $employee->emergency_contact_relationship = $request->emergency_contact_relationship;
-            $employee->emergency_contact_number = $request->emergency_contact_number;
-            $employee->bank_name = $request->bank_name;
-            $employee->account_holder_name = $request->account_holder_name;
-            $employee->account_number = $request->account_number;
-            $employee->bank_identifier_code = $request->bank_identifier_code;
-            $employee->bank_branch = $request->bank_branch;
-            $employee->tax_payer_id = $request->tax_payer_id;
+            $employee->postal_code = $request->postal_code ?? null;
+            $employee->emergency_contact_name = $request->emergency_contact_name ?? null;
+            $employee->emergency_contact_relationship = $request->emergency_contact_relationship ?? null;
+            $employee->emergency_contact_number = $request->emergency_contact_number ?? null;
+            $employee->bank_name = $request->bank_name ?? null;
+            $employee->account_holder_name = $request->account_holder_name ?? null;
+            $employee->account_number = $request->account_number ?? null;
+            $employee->bank_identifier_code = $request->bank_identifier_code ?? null;
+            $employee->bank_branch = $request->bank_branch ?? null;
+            $employee->tax_payer_id = $request->tax_payer_id ?? null;
 
             $employee->save();
 
@@ -694,7 +703,7 @@ class EmployeeController extends Controller
      */
     public function downloadDocument($userId, $documentId)
     {
-        
+
         $user = User::with('employee')->find($userId);
         if (!$user || !$user->employee) {
             return redirect()->back()->with('error', __('Employee not found'));
@@ -723,7 +732,7 @@ class EmployeeController extends Controller
         if (!file_exists($filePath)) {
             return redirect()->back()->with('error', __('Document file not found'));
         }
-        
+
         return response()->download($filePath);
     }
 }

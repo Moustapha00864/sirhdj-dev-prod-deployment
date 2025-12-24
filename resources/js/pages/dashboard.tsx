@@ -20,16 +20,19 @@ interface CompanyDashboardData {
     attendanceRate: number;
     presentToday: number;
     pendingLeaves: number;
+    pendingLeavesToValidate: number;
+    leavesUsedThisYear: number;
     onLeaveToday: number;
     activeJobPostings: number;
     totalCandidates: number;
   };
   charts: {
-    departmentStats: Array<{name: string; value: number; color: string}>;
-    hiringTrend: Array<{month: string; hires: number}>;
-    candidateStatusStats: Array<{name: string; value: number; color: string}>;
-    leaveTypesStats: Array<{name: string; value: number; color: string}>;
-    employeeGrowthChart: Array<{month: string; employees: number}>;
+    departmentStats: Array<{ name: string; value: number; color: string }>;
+    hiringTrend: Array<{ month: string; hires: number; departures: number }>;
+    candidateStatusStats: Array<{ name: string; value: number; color: string }>;
+    leaveTypesStats: Array<{ name: string; value: number; color: string }>;
+    employeeGrowthChart: Array<{ month: string; employees: number }>;
+    leavePerDepartment: Array<{ name: string; value: number }>;
   };
   recentActivities: {
     leaves: Array<any>;
@@ -70,6 +73,8 @@ export default function Dashboard({ dashboardData }: { dashboardData: CompanyDas
     attendanceRate: 0,
     presentToday: 0,
     pendingLeaves: 0,
+    pendingLeavesToValidate: 0,
+    leavesUsedThisYear: 0,
     onLeaveToday: 0,
     activeJobPostings: 0,
     totalCandidates: 0
@@ -80,7 +85,8 @@ export default function Dashboard({ dashboardData }: { dashboardData: CompanyDas
     hiringTrend: [],
     candidateStatusStats: [],
     leaveTypesStats: [],
-    employeeGrowthChart: []
+    employeeGrowthChart: [],
+    leavePerDepartment: []
   };
 
 
@@ -94,7 +100,7 @@ export default function Dashboard({ dashboardData }: { dashboardData: CompanyDas
 
   const userType = dashboardData?.userType || 'employee';
   const isCompanyUser = userType === 'company';
-  
+
   const getStatusColor = (status: string) => {
     const colors = {
       'approved': 'bg-green-50 text-green-700 ring-green-600/20',
@@ -105,15 +111,16 @@ export default function Dashboard({ dashboardData }: { dashboardData: CompanyDas
       'Interview': 'bg-purple-50 text-purple-700 ring-purple-600/20',
       'Hired': 'bg-green-50 text-green-700 ring-green-600/20',
       'Rejected': 'bg-red-50 text-red-700 ring-red-600/20'
-    };
+    } as Record<string, string>;
     return colors[status] || 'bg-gray-50 text-gray-700 ring-gray-600/20';
   };
 
   return (
-    <PageTemplate 
+    <PageTemplate
       title={t('Dashboard')}
       url="/dashboard"
       actions={pageActions}
+      description={t('Resumé de l\'activité RH')}
     >
       <div className="space-y-6">
         {/* Key Metrics */}
@@ -170,10 +177,25 @@ export default function Dashboard({ dashboardData }: { dashboardData: CompanyDas
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">{t('Pending Leaves')}</p>
-                  <p className="mt-2 text-2xl font-bold">{stats.pendingLeaves}</p>
+                  <p className="mt-2 text-2xl font-bold">{stats.pendingLeavesToValidate}</p>
+                  <p className="text-xs text-muted-foreground mt-1">{stats.pendingLeaves} {t('CDD total')}</p>
                 </div>
                 <div className="rounded-full bg-yellow-100 p-3 dark:bg-yellow-900">
                   <Calendar className="h-5 w-5 text-yellow-600 dark:text-yellow-400" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">{t('Leaves Used (Year)')}</p>
+                  <p className="mt-2 text-2xl font-bold">{stats.leavesUsedThisYear} {t('Days')}</p>
+                </div>
+                <div className="rounded-full bg-pink-100 p-3 dark:bg-pink-900">
+                  <BarChart3 className="h-5 w-5 text-pink-600 dark:text-pink-400" />
                 </div>
               </div>
             </CardContent>
@@ -247,28 +269,30 @@ export default function Dashboard({ dashboardData }: { dashboardData: CompanyDas
             </CardContent>
           </Card>
 
-          {/* Hiring Trend Chart */}
+          {/* Hiring & Departures Trend Chart */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-lg font-semibold">
                 <TrendingUp className="h-5 w-5" />
-                {t('Evolution des effectifs')}
+                {t('Entrées & Sorties')}
               </CardTitle>
             </CardHeader>
             <CardContent>
               {charts.hiringTrend.length > 0 ? (
-                <ResponsiveContainer width="100%" height={200}>
-                  <BarChart data={charts.hiringTrend}>
+                <ResponsiveContainer width="100%" height={240}>
+                  <LineChart data={charts.hiringTrend}>
                     <CartesianGrid strokeDasharray="3 3" />
                     <XAxis dataKey="month" />
                     <YAxis />
                     <Tooltip />
-                    <Bar dataKey="hires" fill="#3b82f6" />
-                  </BarChart>
+                    <Legend />
+                    <Line type="monotone" dataKey="hires" stroke="#3b82f6" name={t('Hires')} strokeWidth={2} />
+                    <Line type="monotone" dataKey="departures" stroke="#ef4444" name={t('Departures')} strokeWidth={2} />
+                  </LineChart>
                 </ResponsiveContainer>
               ) : (
                 <div className="text-center py-8 text-muted-foreground">
-                  {t('No hiring data available')}
+                  {t('No data available')}
                 </div>
               )}
             </CardContent>
@@ -309,37 +333,28 @@ export default function Dashboard({ dashboardData }: { dashboardData: CompanyDas
             </CardContent>
           </Card>
 
-          {/* Leave Types Chart */}
+          {/* Leave per Department Chart */}
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-lg font-semibold">
-                <Calendar className="h-5 w-5" />
-                {t('Leave Types')}
+                <BarChart3 className="h-5 w-5" />
+                {t('Congés par Département')}
               </CardTitle>
             </CardHeader>
             <CardContent>
-              {charts.leaveTypesStats.length > 0 ? (
-                <ResponsiveContainer width="100%" height={300}>
-                  <PieChart>
-                    <Pie
-                      data={charts.leaveTypesStats}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={50}
-                      outerRadius={80}
-                      dataKey="value"
-                    >
-                      {charts.leaveTypesStats.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={entry.color} />
-                      ))}
-                    </Pie>
+              {charts.leavePerDepartment.length > 0 ? (
+                <ResponsiveContainer width="100%" height={240}>
+                  <BarChart data={charts.leavePerDepartment} layout="vertical">
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis type="number" />
+                    <YAxis dataKey="name" type="category" width={100} />
                     <Tooltip />
-                    <Legend wrapperStyle={{ fontSize: '12px' }} />
-                  </PieChart>
+                    <Bar dataKey="value" fill="#10b981" name={t('Leaves')} />
+                  </BarChart>
                 </ResponsiveContainer>
               ) : (
                 <div className="text-center py-8 text-muted-foreground">
-                  {t('No leave types available')}
+                  {t('No data available')}
                 </div>
               )}
             </CardContent>
@@ -358,7 +373,7 @@ export default function Dashboard({ dashboardData }: { dashboardData: CompanyDas
                 </div>
                 <div className="flex items-center gap-2">
                   <Badge variant="secondary">{recentActivities.leaves.length}</Badge>
-                  <button 
+                  <button
                     onClick={() => window.location.href = route('hr.leave-applications.index')}
                     className="px-2 py-1 text-xs bg-blue-100 text-blue-700 hover:bg-blue-200 rounded-md font-medium transition-colors"
                   >
@@ -416,7 +431,7 @@ export default function Dashboard({ dashboardData }: { dashboardData: CompanyDas
                 </div>
                 <div className="flex items-center gap-2">
                   <Badge variant="secondary">{recentActivities.candidates.length}</Badge>
-                  <button 
+                  <button
                     onClick={() => window.location.href = route('hr.recruitment.candidates.index')}
                     className="px-2 py-1 text-xs bg-blue-100 text-blue-700 hover:bg-blue-200 rounded-md font-medium transition-colors"
                   >
@@ -468,7 +483,7 @@ export default function Dashboard({ dashboardData }: { dashboardData: CompanyDas
                 </div>
                 <div className="flex items-center gap-2">
                   <Badge variant="secondary">{recentActivities.announcements.length}</Badge>
-                  <button 
+                  <button
                     onClick={() => window.location.href = route('hr.announcements.index')}
                     className="px-2 py-1 text-xs bg-blue-100 text-blue-700 hover:bg-blue-200 rounded-md font-medium transition-colors"
                   >
@@ -522,7 +537,7 @@ export default function Dashboard({ dashboardData }: { dashboardData: CompanyDas
                 </div>
                 <div className="flex items-center gap-2">
                   <Badge variant="secondary">{recentActivities.meetings.length}</Badge>
-                  <button 
+                  <button
                     onClick={() => window.location.href = route('meetings.meetings.index')}
                     className="px-2 py-1 text-xs bg-blue-100 text-blue-700 hover:bg-blue-200 rounded-md font-medium transition-colors"
                   >
@@ -585,20 +600,20 @@ export default function Dashboard({ dashboardData }: { dashboardData: CompanyDas
                   <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
                   <XAxis dataKey="month" stroke="#6b7280" />
                   <YAxis stroke="#6b7280" />
-                  <Tooltip 
-                    contentStyle={{ 
-                      backgroundColor: '#ffffff', 
-                      border: '1px solid #e5e7eb', 
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: '#ffffff',
+                      border: '1px solid #e5e7eb',
                       borderRadius: '8px',
                       boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
-                    }} 
+                    }}
                   />
-                  <Area 
-                    type="monotone" 
-                    dataKey="employees" 
-                    stroke="#3b82f6" 
+                  <Area
+                    type="monotone"
+                    dataKey="employees"
+                    stroke="#3b82f6"
                     strokeWidth={3}
-                    fillOpacity={0.2} 
+                    fillOpacity={0.2}
                     fill="#3b82f6"
                     dot={{ fill: '#3b82f6', strokeWidth: 2, r: 5 }}
                   />

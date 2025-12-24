@@ -82,6 +82,7 @@ use App\Http\Controllers\GoalTypeController;
 use App\Http\Controllers\EmployeeGoalController;
 use App\Http\Controllers\ReviewCycleController;
 use App\Http\Controllers\EmployeeReviewController;
+use App\Http\Controllers\ReportController;
 use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
 
@@ -434,6 +435,15 @@ Route::middleware(['auth', 'verified', 'setting'])->group(function () {
             Route::get('hr/warnings/{warning}/download-document', [WarningController::class, 'downloadDocument'])->middleware('permission:view-warnings')->name('hr.warnings.download-document');
             Route::put('hr/warnings/{warning}/change-status', [WarningController::class, 'changeStatus'])->middleware('permission:edit-warnings')->name('hr.warnings.change-status');
             Route::put('hr/warnings/{warning}/update-improvement-plan', [WarningController::class, 'updateImprovementPlan'])->middleware('permission:edit-warnings')->name('hr.warnings.update-improvement-plan');
+        });
+
+        // Report Routes
+        Route::middleware('permission:manage-reports')->group(function () {
+            Route::get('hr/reports', [ReportController::class, 'index'])->name('hr.reports.index');
+            Route::get('hr/reports/headcount', [ReportController::class, 'getHeadcountReport'])->name('hr.reports.headcount');
+            Route::get('hr/reports/leave', [ReportController::class, 'getLeaveReport'])->name('hr.reports.leave');
+            Route::get('hr/reports/absenteeism', [ReportController::class, 'getAbsenteeismReport'])->name('hr.reports.absenteeism');
+            Route::get('hr/reports/export', [ReportController::class, 'export'])->name('hr.reports.export');
         });
 
         // Trip Routes

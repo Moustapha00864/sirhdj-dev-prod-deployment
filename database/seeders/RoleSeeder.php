@@ -618,6 +618,7 @@ class RoleSeeder extends Seeder
             'delete-time-entries',
             'approve-time-entries',
             'reject-time-entries',
+            'manage-reports',
 
             // Payroll
             'manage-salary-components',

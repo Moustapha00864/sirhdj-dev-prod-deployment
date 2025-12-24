@@ -140,7 +140,7 @@ class DashboardController extends Controller
 
         // Core HR Statistics
         $totalEmployees = User::where('type', 'employee')->whereIn('created_by', $companyUserIds)->count();
-        
+
         // Mettre ceci :
         $totalDepartments = \App\Models\Department::whereIn('created_by', $companyUserIds)->count();
         $totalBranches = \App\Models\Branch::whereIn('created_by', $companyUserIds)->count();
@@ -164,10 +164,10 @@ class DashboardController extends Controller
             ->where('gender', 'female')
             ->count();
         $maleEmployees = $totalEmployees - $femaleEmployees; // on déduit automatiquement le reste
-        
+
         // Pourcentage d'employés féminins
         $attendanceRate = $totalEmployees > 0 ? round(($femaleEmployees / $totalEmployees) * 100, 1) : 0;
-        
+
         // Optionnel : tableau complet pour le dashboard
         $genderDistribution = [
             'female' => $attendanceRate,
@@ -176,12 +176,21 @@ class DashboardController extends Controller
 
 
 
-         // Leave Statistics
-        // Leave Statistics — Remplacé par : Nombre total de CDD
-        // Leave Statistics — Remplacé par : Nombre total d'employés en CDD
-        $pendingLeaves = \App\Models\Employee::whereIn('created_by', $companyUserIds)
+        // Total CDD
+        $totalCDD = \App\Models\Employee::whereIn('created_by', $companyUserIds)
             ->where('contract_type_id', 28) // 28 = CDD
             ->count();
+
+        // Actual Pending Leaves to validate
+        $pendingLeavesToValidate = \App\Models\LeaveApplication::whereIn('created_by', $companyUserIds)
+            ->where('status', 'pending')
+            ->count();
+
+        // Leaves used during the year (Total days)
+        $leavesUsedThisYear = \App\Models\LeaveApplication::whereIn('created_by', $companyUserIds)
+            ->where('status', 'approved')
+            ->whereYear('start_date', now()->year)
+            ->sum('total_days');
 
 
         // Recruitment Statistics
@@ -189,9 +198,9 @@ class DashboardController extends Controller
         $activeJobPostings = \App\Models\Employee::whereIn('created_by', $companyUserIds)
             ->where('contract_type_id', 25) // 25 = CDI
             ->count();
-        
+
         // Conserve la logique originale des candidats
-           $totalCandidates = \App\Models\Employee::whereIn('created_by', $companyUserIds)
+        $totalCandidates = \App\Models\Employee::whereIn('created_by', $companyUserIds)
             ->where('personnel_type', 'LIKE', '%PARA MEDICAL%')
             ->count();
 
@@ -221,101 +230,130 @@ class DashboardController extends Controller
             });
 
 
-        // Monthly Hiring Trend for Chart (last 6 months)
-        // Monthly Hiring Trend for Chart (last 6 months)
-        $hiringTrend = [];
+        // Monthly Hiring & Departures Trend for Chart (last 6 months)
+        $hiresDeparturesTrend = [];
         for ($i = 5; $i >= 0; $i--) {
             $month = now()->subMonths($i);
-            $count = \App\Models\Employee::whereIn('created_by', $companyUserIds)
+
+            $hiresCount = \App\Models\Employee::whereIn('created_by', $companyUserIds)
                 ->whereMonth('date_of_joining', $month->month)
                 ->whereYear('date_of_joining', $month->year)
                 ->count();
-        
-            $hiringTrend[] = [
-                'month' => $month->locale('fr')->isoFormat('MMMM YYYY'), // mois en français
-                'hires' => $count
+
+            $terminationsCount = \App\Models\Termination::whereIn('created_by', $companyUserIds)
+                ->where('status', 'approved')
+                ->whereMonth('termination_date', $month->month)
+                ->whereYear('termination_date', $month->year)
+                ->count();
+
+            $resignationsCount = \App\Models\Resignation::whereIn('created_by', $companyUserIds)
+                ->where('status', 'approved')
+                ->whereMonth('resignation_date', $month->month)
+                ->whereYear('resignation_date', $month->year)
+                ->count();
+
+            $hiresDeparturesTrend[] = [
+                'month' => $month->locale('fr')->isoFormat('MMMM YYYY'),
+                'hires' => $hiresCount,
+                'departures' => $terminationsCount + $resignationsCount
             ];
+        }
+
+        // Leave per Department Chart data
+        $leavePerDepartment = \App\Models\Department::whereIn('created_by', $companyUserIds)
+            ->get()
+            ->map(function ($dept) use ($companyUserIds) {
+                $employeeIds = \App\Models\Employee::where('department_id', $dept->id)->pluck('user_id');
+                $leaveCount = \App\Models\LeaveApplication::whereIn('employee_id', $employeeIds)
+                    ->whereYear('start_date', now()->year)
+                    ->where('status', 'approved')
+                    ->count();
+
+                return [
+                    'name' => $dept->name,
+                    'value' => $leaveCount
+                ];
+            })->filter(fn($item) => $item['value'] > 0)->values();
+
+
+
+
+        // Employee Contract Type Distribution for Chart
+        $candidateStatusStats = \App\Models\Employee::whereIn('created_by', $companyUserIds)
+            ->selectRaw('contract_type_id, COUNT(*) as total')
+            ->groupBy('contract_type_id')
+            ->get();
+
+        // Récupérer les noms des types de contrat
+        $contractTypes = \App\Models\ContractType::pluck('name', 'id')->toArray();
+
+        // Couleurs correspondant aux noms exacts dans la table
+        $colors = [
+            'ETATIQUE' => '#1F77B4',      // bleu
+            'PNDS' => '#FF7F0E',          // orange
+            'PRESTATAIRE' => '#2CA02C',   // vert
+            'STAGIAIRE' => '#D62728',     // rouge
+            'UNIVERSITAIRE' => '#9467BD', // violet
+            'Non défini' => '#8C564B',    // brun
+        ];
+
+        // Si aucune donnée, afficher un cercle gris
+        if ($candidateStatusStats->isEmpty()) {
+            $candidateStatusStats = collect([
+                [
+                    'name' => '',
+                    'value' => 1,
+                    'color' => '#D1D5DB' // gris clair
+                ]
+            ]);
+        } else {
+            // Mapper les données pour le graphique
+            $candidateStatusStats = $candidateStatusStats->map(function ($item) use ($contractTypes, $colors) {
+                $name = $contractTypes[$item->contract_type_id] ?? 'Non défini';
+                $color = $colors[$name] ?? '#6B7280'; // fallback si couleur non définie
+
+                return [
+                    'name' => $name,
+                    'value' => $item->total ?? 0,
+                    'color' => $color
+                ];
+            });
         }
 
 
 
-
-       // Employee Contract Type Distribution for Chart
-$candidateStatusStats = \App\Models\Employee::whereIn('created_by', $companyUserIds)
-    ->selectRaw('contract_type_id, COUNT(*) as total')
-    ->groupBy('contract_type_id')
-    ->get();
-
-// Récupérer les noms des types de contrat
-$contractTypes = \App\Models\ContractType::pluck('name', 'id')->toArray();
-
-// Couleurs correspondant aux noms exacts dans la table
-$colors = [
-    'ETATIQUE' => '#1F77B4',      // bleu
-    'PNDS' => '#FF7F0E',          // orange
-    'PRESTATAIRE' => '#2CA02C',   // vert
-    'STAGIAIRE' => '#D62728',     // rouge
-    'UNIVERSITAIRE' => '#9467BD', // violet
-    'Non défini' => '#8C564B',    // brun
-];
-
-// Si aucune donnée, afficher un cercle gris
-if ($candidateStatusStats->isEmpty()) {
-    $candidateStatusStats = collect([
-        [
-            'name'  => '',
-            'value' => 1,
-            'color' => '#D1D5DB' // gris clair
-        ]
-    ]);
-} else {
-    // Mapper les données pour le graphique
-    $candidateStatusStats = $candidateStatusStats->map(function ($item) use ($contractTypes, $colors) {
-        $name = $contractTypes[$item->contract_type_id] ?? 'Non défini';
-        $color = $colors[$name] ?? '#6B7280'; // fallback si couleur non définie
-
-        return [
-            'name'  => $name,
-            'value' => $item->total ?? 0,
-            'color' => $color
-        ];
-    });
-}
-
-
-
         // Leave Types for Chart
-       // Employee Personnel Type Distribution for Chart
-$leaveTypesStats = \App\Models\Employee::whereIn('created_by', $companyUserIds)
-    ->selectRaw('personnel_type, COUNT(*) as total')
-    ->groupBy('personnel_type')
-    ->get()
-    ->map(function ($item) {
-        $colors = [
-            'ADMINISTRATION' => '#1F77B4',   // bleu
-            'MEDICAL'        => '#FF7F0E',   // orange
-            'PARA MEDICAL'   => '#2CA02C',   // vert
-            'TECHNIQUE'      => '#D62728',   // rouge
-            'Non défini'     => '#6B7280',   // gris fallback
-        ];
+        // Employee Personnel Type Distribution for Chart
+        $leaveTypesStats = \App\Models\Employee::whereIn('created_by', $companyUserIds)
+            ->selectRaw('personnel_type, COUNT(*) as total')
+            ->groupBy('personnel_type')
+            ->get()
+            ->map(function ($item) {
+                $colors = [
+                    'ADMINISTRATION' => '#1F77B4',   // bleu
+                    'MEDICAL' => '#FF7F0E',   // orange
+                    'PARA MEDICAL' => '#2CA02C',   // vert
+                    'TECHNIQUE' => '#D62728',   // rouge
+                    'Non défini' => '#6B7280',   // gris fallback
+                ];
 
-        return [
-            'name'  => $item->personnel_type ?? 'Non défini', // nom de la catégorie
-            'value' => $item->total ?? 0,                     // valeur pour le graphique
-            'color' => $colors[$item->personnel_type] ?? '#6B7280'
-        ];
-    });
+                return [
+                    'name' => $item->personnel_type ?? 'Non défini', // nom de la catégorie
+                    'value' => $item->total ?? 0,                     // valeur pour le graphique
+                    'color' => $colors[$item->personnel_type] ?? '#6B7280'
+                ];
+            });
 
-// Si aucune donnée, afficher une barre ou cercle gris
-if ($leaveTypesStats->isEmpty()) {
-    $leaveTypesStats = collect([
-        [
-            'name'  => 'Aucune donnée',
-            'value' => 1,
-            'color' => '#D1D5DB'
-        ]
-    ]);
-}
+        // Si aucune donnée, afficher une barre ou cercle gris
+        if ($leaveTypesStats->isEmpty()) {
+            $leaveTypesStats = collect([
+                [
+                    'name' => 'Aucune donnée',
+                    'value' => 1,
+                    'color' => '#D1D5DB'
+                ]
+            ]);
+        }
 
 
         // Employee Growth Chart (Monthly for current year)
@@ -326,17 +364,17 @@ if ($leaveTypesStats->isEmpty()) {
                 ->whereMonth('date_of_joining', $month)
                 ->whereYear('date_of_joining', now()->year)
                 ->count();
-        
+
             $employeeGrowthChart[] = [
                 'month' => \Carbon\Carbon::create(null, $month, 1)
-                                ->locale('fr')
-                                ->isoFormat('MMMM'), // Mois en français
+                    ->locale('fr')
+                    ->isoFormat('MMMM'), // Mois en français
                 'employees' => $count
             ];
         }
 
 
-       // Recent Activities
+        // Recent Activities
         $recentLeaves = \App\Models\LeaveApplication::whereIn('created_by', $companyUserIds)
             ->with(['employee', 'leaveType']);
         if (config('app.is_demo') == true) {
@@ -347,7 +385,7 @@ if ($leaveTypesStats->isEmpty()) {
                 ->whereDate('end_date', '>=', today())
                 ->get();
         }
-        
+
 
 
 
@@ -373,23 +411,26 @@ if ($leaveTypesStats->isEmpty()) {
         $dashboardData = [
             'stats' => [
                 'totalEmployees' => $totalEmployees,
-                 'totalDepartments' => $totalDepartments,
+                'totalDepartments' => $totalDepartments,
                 'totalBranches' => $totalBranches,
                 'newEmployeesThisMonth' => $newEmployeesThisMonth,
                 'jobPostsThisMonth' => $jobPostsThisMonth,
                 'candidatesThisMonth' => $candidatesThisMonth,
                 'attendanceRate' => $attendanceRate,
                 'presentToday' => $presentToday,
-                'pendingLeaves' => $pendingLeaves,
+                'pendingLeaves' => $totalCDD, // Kept same key for compatibility if needed, but it's CDD
+                'pendingLeavesToValidate' => $pendingLeavesToValidate,
+                'leavesUsedThisYear' => $leavesUsedThisYear,
                 'activeJobPostings' => $activeJobPostings,
                 'totalCandidates' => $totalCandidates
             ],
             'charts' => [
                 'departmentStats' => $departmentStats,
-                'hiringTrend' => $hiringTrend,
+                'hiringTrend' => $hiresDeparturesTrend, // Replaced with combined trend
                 'candidateStatusStats' => $candidateStatusStats,
                 'leaveTypesStats' => $leaveTypesStats,
-                'employeeGrowthChart' => $employeeGrowthChart
+                'employeeGrowthChart' => $employeeGrowthChart,
+                'leavePerDepartment' => $leavePerDepartment
             ],
             'recentActivities' => [
                 'leaves' => $recentLeaves,
