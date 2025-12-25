@@ -6,13 +6,9 @@ use App\Models\LeaveApplication;
 use App\Models\LeaveApproval;
 use App\Models\AuditLog;
 use App\Models\User;
-use App\Mail\LeaveStage1ApprovedMail;
-use App\Mail\LeaveStage2ApprovedMail;
-use App\Mail\LeaveRejectedMail;
 use App\Models\LeaveMovement;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
-use Illuminate\Support\Facades\Auth;
 
 class LeaveApprovalService
 {

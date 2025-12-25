@@ -1,5 +1,5 @@
 import React from 'react';
-import { useForm } from '@inertiajs/react';
+import { useForm, router } from '@inertiajs/react';
 import {
     Dialog,
     DialogContent,
@@ -17,14 +17,16 @@ interface ApprovalModalProps {
 }
 
 export default function ApprovalModal({ leaveId, isOpen, onClose }: ApprovalModalProps) {
-    const { data, setData, post, processing, reset } = useForm({
+    const { data, setData, processing, reset } = useForm({
         status: 'approved',
         manager_comments: ''
     });
 
     const handleSubmit = (status: 'approved' | 'rejected') => {
-        setData('status', status);
-        post(route('hr.leave-applications.update-status', leaveId), {
+        router.put(route('hr.leave-applications.update-status', leaveId), {
+            status,
+            manager_comments: data.manager_comments
+        }, {
             onSuccess: () => {
                 onClose();
                 reset();

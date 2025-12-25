@@ -438,14 +438,14 @@ Route::middleware(['auth', 'verified', 'setting'])->group(function () {
         });
 
         // Report Routes
-        Route::middleware('permission:manage-reports')->group(function () {
+        // Route::middleware('permission:manage-reports')->group(function () {
             Route::get('hr/reports', [ReportController::class, 'index'])->name('hr.reports.index');
             Route::get('hr/reports/headcount', [ReportController::class, 'getHeadcountReport'])->name('hr.reports.headcount');
             Route::get('hr/reports/leave', [ReportController::class, 'getLeaveReport'])->name('hr.reports.leave');
             Route::get('hr/reports/absenteeism', [ReportController::class, 'getAbsenteeismReport'])->name('hr.reports.absenteeism');
             Route::get('hr/reports/emploi', [ReportController::class, 'getEmploiReport'])->name('hr.reports.emploi');
             Route::get('hr/reports/export', [ReportController::class, 'export'])->name('hr.reports.export');
-        });
+        // });
 
         // Trip Routes
         Route::middleware('permission:manage-trips')->group(function () {
