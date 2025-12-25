@@ -5,3 +5,5 @@
 <p><strong>Reason:</strong> {{ $leave->reason }}</p>
 <p><strong>From:</strong> {{ $leave->start_date->format('Y-m-d') }} <strong>To:</strong>
     {{ $leave->end_date->format('Y-m-d') }}</p>
+
+    

@@ -125,7 +125,7 @@ export default function TrainingSessions() {
       toast.loading(t('Creating training session...'));
 
       router.post(route('hr.training-sessions.store'), submitData, {
-        onSuccess: (page) => {
+        onSuccess: (page : any) => {
           setIsFormModalOpen(false);
           toast.dismiss();
           if (page.props.flash.success) {
@@ -147,7 +147,7 @@ export default function TrainingSessions() {
       toast.loading(t('Updating training session...'));
 
       router.put(route('hr.training-sessions.update', currentItem.id), submitData, {
-        onSuccess: (page) => {
+        onSuccess: (page : any) => {
           setIsFormModalOpen(false);
           toast.dismiss();
           if (page.props.flash.success) {
@@ -172,7 +172,7 @@ export default function TrainingSessions() {
     toast.loading(t('Deleting training session...'));
     
     router.delete(route('hr.training-sessions.destroy', currentItem.id), {
-      onSuccess: (page) => {
+      onSuccess: (page : any) => {
         setIsDeleteModalOpen(false);
         toast.dismiss();
         if (page.props.flash.success) {
@@ -240,7 +240,7 @@ export default function TrainingSessions() {
     { 
       key: 'program', 
       label: t('Program'),
-      render: (_, row) => (
+      render: (row: any) => (
         <div>
           <div className="font-medium">{row.name || row.training_program?.name || '-'}</div>
           <div className="text-xs text-gray-500">{row.training_program?.name || '-'}</div>
@@ -252,7 +252,7 @@ export default function TrainingSessions() {
       label: t('Date & Time'),
       sortable: true,
       sortField: 'start_date',
-      render: (_, row) => (
+      render: (row: any) => (
         <div>
           <div>{window.appSettings?.formatDateTime(row.start_date, false) || format(new Date(row.start_date), 'MMM dd, yyyy')}</div>
           <div className="text-xs text-gray-500">
@@ -264,9 +264,9 @@ export default function TrainingSessions() {
     { 
       key: 'location', 
       label: t('Location'),
-      render: (value, row) => (
+      render: (row: any) => (
         <div>
-          <div>{value || '-'}</div>
+          <div>{row.location || '-'}</div>
           <Badge variant="outline" className={row.location_type === 'virtual' ? 'bg-blue-50 text-blue-700' : 'bg-green-50 text-green-700'}>
             {row.location_type === 'virtual' ? t('Virtual') : t('Physical')}
           </Badge>
@@ -277,7 +277,8 @@ export default function TrainingSessions() {
       key: 'status', 
       label: t('Status'),
       sortable: true,
-      render: (value) => {
+      sortField: 'status',
+      render: (row: any) => {
         const statusClasses = {
           'scheduled': 'bg-blue-50 text-blue-700 ring-blue-600/20',
           'in_progress': 'bg-amber-50 text-amber-700 ring-amber-600/20',
@@ -286,8 +287,8 @@ export default function TrainingSessions() {
         };
         
         return (
-          <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset ${statusClasses[value] || ''}`}>
-            {value.charAt(0).toUpperCase() + value.slice(1).replace('_', ' ')}
+          <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ring-1 ring-inset ${statusClasses[row.status] || ''}`}>
+            {row.status.charAt(0).toUpperCase() + row.status.slice(1).replace('_', ' ')}
           </span>
         );
       }
@@ -295,18 +296,18 @@ export default function TrainingSessions() {
     { 
       key: 'trainers', 
       label: t('Trainers'),
-      render: (value) => {
-        if (!value || value.length === 0) {
+      render: (row: any) => {
+        if (!row.trainers || row.trainers.length === 0) {
           return '-';
         }
         
         return (
           <div className="space-y-1">
-            {value.slice(0, 2).map((trainer: any) => (
+            {row.trainers.slice(0, 2).map((trainer: any) => (
               <div key={trainer.id} className="text-sm">{trainer.name}</div>
             ))}
-            {value.length > 2 && (
-              <div className="text-xs text-gray-500">+{value.length - 2} more</div>
+            {row.trainers.length > 2 && (
+              <div className="text-xs text-gray-500">+{row.trainers.length - 2} more</div>
             )}
           </div>
         );
@@ -315,7 +316,7 @@ export default function TrainingSessions() {
     { 
       key: 'attendance_count', 
       label: t('Attendance'),
-      render: (value) => value || '0'
+      render: (row: any) => row.attendance_count || '0'
     }
   ];
 
@@ -560,7 +561,7 @@ export default function TrainingSessions() {
               name: 'is_recurring', 
               label: t('Recurring Session'), 
               type: 'checkbox',
-              showWhen: (formData) => formMode === 'create'
+              showWhen: (formData : any) => formMode === 'create'
             },
             { 
               name: 'recurrence_pattern', 
@@ -571,7 +572,7 @@ export default function TrainingSessions() {
                 { value: 'weekly', label: t('Weekly') },
                 { value: 'monthly', label: t('Monthly') }
               ],
-              showWhen: (formData) => formData.is_recurring
+              showWhen: (formData : any) => formData.is_recurring
             },
             { 
               name: 'recurrence_count', 
@@ -579,17 +580,13 @@ export default function TrainingSessions() {
               type: 'number',
               min: 1,
               max: 52,
-              showWhen: (formData) => formData.is_recurring
+              showWhen: (formData : any) => formData.is_recurring
             }
           ],
           modalSize: 'lg'
         }}
         initialData={currentItem ? {
           ...currentItem,
-          start_date: currentItem.start_date ? currentItem.start_date.split(' ')[0] : '',
-          start_time: currentItem.start_date ? currentItem.start_date.split(' ')[1]?.substring(0, 5) : '',
-          end_date: currentItem.end_date ? currentItem.end_date.split(' ')[0] : '',
-          end_time: currentItem.end_date ? currentItem.end_date.split(' ')[1]?.substring(0, 5) : '',
           start_date: currentItem.start_date ? currentItem.start_date.split(' ')[0] : '',
           start_time: currentItem.start_date ? currentItem.start_date.split(' ')[1]?.substring(0, 5) : '',
           end_date: currentItem.end_date ? currentItem.end_date.split(' ')[0] : '',

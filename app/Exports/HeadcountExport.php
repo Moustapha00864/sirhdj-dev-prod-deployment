@@ -18,8 +18,7 @@ class HeadcountExport implements FromCollection, WithHeadings, WithMapping
 
     public function collection()
     {
-        $companyUserIds = getCompanyAndUsersId();
-        $query = Employee::with(['user', 'department', 'branch', 'designation']);
+        $query = Employee::with(['user', 'department', 'branch', 'designation', 'contractType']);
 
         if (isset($this->filters['department_id']) && $this->filters['department_id'] !== 'all') {
             $query->where('department_id', $this->filters['department_id']);

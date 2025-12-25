@@ -101,6 +101,14 @@ class Employee extends Model
      */
     public function documents()
     {
-        return $this->hasMany(EmployeeDocument::class,'employee_id','user_id');
+        return $this->hasMany(EmployeeDocument::class, 'employee_id', 'user_id');
+    }
+
+    /**
+     * Get the contract type of the employee.
+     */
+    public function contractType()
+    {
+        return $this->belongsTo(ContractType::class, 'contract_type_id');
     }
 }

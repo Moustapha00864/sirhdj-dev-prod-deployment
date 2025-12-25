@@ -33,7 +33,7 @@ class ReportController extends Controller
         $companyUserIds = getCompanyAndUsersId();
 
         $query = Employee::whereIn('created_by', $companyUserIds)
-            ->with(['department', 'branch', 'designation', 'contractType']);
+            ->with(['user', 'department', 'branch', 'designation', 'contractType']);
 
         if ($request->department_id && $request->department_id !== 'all') {
             $query->where('department_id', $request->department_id);
@@ -128,8 +128,8 @@ class ReportController extends Controller
 
     public function export(Request $request)
     {
-        $type = $request->type; // headcount, leave, absenteeism
-        $format = $request->format ?? 'xlsx'; // xlsx, csv, pdf
+        $type = $request->input('type'); // headcount, leave, absenteeism
+        $format = $request->input('format', 'xlsx'); // xlsx, csv, pdf
 
         if ($type === 'headcount') {
             return Excel::download(new HeadcountExport($request->all()), "rapport_effectifs_" . now()->format('Y-m-d') . ".$format");
