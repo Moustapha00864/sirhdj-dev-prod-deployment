@@ -188,14 +188,18 @@ class LeaveApplicationController extends Controller
 
         $leaveApplication = LeaveApplication::create($validated);
 
-        // Create attendance records if auto-approved
         if ($leaveApplication->status === 'approved') {
             $leaveApplication->createAttendanceRecords();
         } else {
             // Send notification to Department Manager (Stage 1)
             $department = $leaveApplication->employee->employee->department;
             if ($department && $department->manager) {
-                Mail::to($department->manager->email)->send(new LeaveSubmittedMail($leaveApplication));
+                Mail::to($department->manager->email)->send(new \App\Mail\LeaveNotificationMail(
+                    $leaveApplication,
+                    $department->manager,
+                    'manager_level_1',
+                    'Demande de congé – Approbation requise (Niveau 1)'
+                ));
             }
         }
 

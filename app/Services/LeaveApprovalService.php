@@ -63,15 +63,36 @@ class LeaveApprovalService
                 $this->updateLeaveBalance($leave);
 
                 // Send final notification to employee
-                Mail::to($leave->employee->email)->send(new LeaveStage2ApprovedMail($leave));
+                Mail::to($leave->employee->email)->send(new \App\Mail\LeaveNotificationMail(
+                    $leave,
+                    $leave->employee,
+                    'employee_final_approved',
+                    'Félicitations – Votre demande de congé est validée'
+                ));
             } else {
                 $leave->update(['current_stage' => $nextStage]);
 
-                // Send notifications based on the new stage
-                $this->notifyNextStageApprovers($leave, $nextStage, $department);
+                // Also notify employee about progress based on what was just approved
+                $employeeTemplate = 'employee_level_1_approved';
+                $employeeSubject = 'Mise à jour – Votre demande de congé (Niveau 1 validé)';
 
-                // Also notify employee about progress
-                Mail::to($leave->employee->email)->send(new LeaveStage1ApprovedMail($leave));
+                if ($currentStage == 2) {
+                    $employeeTemplate = 'employee_level_2_approved';
+                    $employeeSubject = 'Mise à jour – Votre demande de congé (Niveau 2 validé)';
+                } elseif ($currentStage == 3) {
+                    $employeeTemplate = 'employee_hr_approved';
+                    $employeeSubject = 'Mise à jour – Votre demande de congé (RH validé)';
+                }
+
+                Mail::to($leave->employee->email)->send(new \App\Mail\LeaveNotificationMail(
+                    $leave,
+                    $leave->employee,
+                    $employeeTemplate,
+                    $employeeSubject
+                ));
+
+                // Send notifications based on the new stage (to next approvers)
+                $this->notifyNextStageApprovers($leave, $nextStage, $department);
             }
 
             // Audit log
@@ -112,24 +133,38 @@ class LeaveApprovalService
     private function notifyNextStageApprovers($leave, $nextStage, $department)
     {
         $recipients = [];
+        $template = '';
+        $subject = '';
+
         if ($nextStage === 2) {
             if ($department && $department->validator2) {
-                $recipients[] = $department->validator2->email;
+                $recipients[] = $department->validator2;
+                $template = 'manager_level_2';
+                $subject = 'Demande de congé – Approbation requise (Niveau 2)';
             }
         } elseif ($nextStage === 3) {
-            $hrUsers = User::role('HR Generalist')->pluck('email')->toArray();
-            if (empty($hrUsers)) {
-                $hrUsers = User::role('Admin')->pluck('email')->toArray();
+            $hrUsers = User::role('HR Generalist')->get();
+            if ($hrUsers->isEmpty()) {
+                $hrUsers = User::role('Admin')->get();
             }
             $recipients = $hrUsers;
+            $template = 'hr_validation';
+            $subject = 'Alerte – Validation RH requise pour une demande de congé';
         } elseif ($nextStage === 4) {
             if ($department && $department->director) {
-                $recipients[] = $department->director->email;
+                $recipients[] = $department->director;
+                $template = 'director_validation';
+                $subject = 'Alerte – Validation Direction requise pour une demande de congé';
             }
         }
 
-        foreach ($recipients as $email) {
-            Mail::to($email)->send(new LeaveStage1ApprovedMail($leave));
+        foreach ($recipients as $recipient) {
+            Mail::to($recipient->email)->send(new \App\Mail\LeaveNotificationMail(
+                $leave,
+                $recipient,
+                $template,
+                $subject
+            ));
         }
     }
 
@@ -157,7 +192,14 @@ class LeaveApprovalService
             ]);
 
             // Envoyer notification à l'employé
-            Mail::to($leave->employee->email)->send(new LeaveRejectedMail($leave, $comments));
+            Mail::to($leave->employee->email)->send(new \App\Mail\LeaveNotificationMail(
+                $leave,
+                $leave->employee,
+                'employee_reject_approved',
+                'Mise à jour – Votre demande de congé (Rejetée)',
+                $comments,
+                $approver
+            ));
 
             // Journal d’audit
             AuditLog::create([
