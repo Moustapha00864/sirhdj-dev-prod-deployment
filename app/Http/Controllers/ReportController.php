@@ -127,6 +127,34 @@ class ReportController extends Controller
         ]);
     }
 
+    public function getEmploiReport(Request $request)
+    {
+        $companyUserIds = getCompanyAndUsersId();
+
+        $query = Employee::whereIn('created_by', $companyUserIds)
+            ->with(['user', 'department', 'branch', 'designation', 'contractType']);
+
+        if ($request->department_id && $request->department_id !== 'all') {
+            $query->where('department_id', $request->department_id);
+        }
+
+        $employees = $query->get();
+
+        // Stats for charts (reusing headcount logic as requested by UI)
+        $byDepartment = $employees->groupBy('department.name')->map->count();
+        $byContractType = $employees->groupBy('contractType.name')->map->count();
+        $byGender = $employees->groupBy('gender')->map->count();
+
+        return response()->json([
+            'data' => $employees,
+            'charts' => [
+                'byDepartment' => $byDepartment,
+                'byContractType' => $byContractType,
+                'byGender' => $byGender,
+            ]
+        ]);
+    }
+
     public function export(Request $request)
     {
         $type = $request->input('type'); // headcount, leave, absenteeism, emploi
