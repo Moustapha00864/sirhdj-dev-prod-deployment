@@ -16,6 +16,7 @@ use Maatwebsite\Excel\Facades\Excel;
 use App\Exports\HeadcountExport;
 use App\Exports\LeaveExport;
 use App\Exports\AbsenteeismExport;
+use App\Exports\EmploiExport;
 
 class ReportController extends Controller
 {
@@ -128,8 +129,15 @@ class ReportController extends Controller
 
     public function export(Request $request)
     {
-        $type = $request->input('type'); // headcount, leave, absenteeism
+        $type = $request->input('type'); // headcount, leave, absenteeism, emploi
         $format = $request->input('format', 'xlsx'); // xlsx, csv, pdf
+
+        if ($type === 'emploi') {
+            if (!$request->department_id || $request->department_id === 'all') {
+                return back()->with('error', 'Veuillez sélectionner un département spécifique pour le rapport d\'emploi.');
+            }
+            return Excel::download(new EmploiExport($request->all()), "rapport_emploi_" . now()->format('Y-m-d') . ".$format");
+        }
 
         if ($type === 'headcount') {
             return Excel::download(new HeadcountExport($request->all()), "rapport_effectifs_" . now()->format('Y-m-d') . ".$format");

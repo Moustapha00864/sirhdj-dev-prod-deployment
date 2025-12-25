@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { FileDown, Users, Calendar, Clock, BarChart3, PieChart as PieChartIcon, Download } from 'lucide-react';
+import { FileDown, Users, Calendar, Clock, BarChart3, PieChart as PieChartIcon, Download, Briefcase } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid, Legend, LineChart, Line } from 'recharts';
 import axios from 'axios';
@@ -21,6 +21,9 @@ export default function Reports({ departments = [] }: { departments?: any[] }) {
     const [filters, setFilters] = useState({
         department_id: 'all',
         year: new Date().getFullYear().toString(),
+        search: '',
+        status: 'all',
+        contract_type: 'all'
     });
 
     const fetchData = async () => {
@@ -55,15 +58,15 @@ export default function Reports({ departments = [] }: { departments?: any[] }) {
         const contractData = Object.entries(data.charts.byContractType).map(([name, value]) => ({ name, value }));
 
         return (
-            <div className="grid gap-6 md:grid-cols-2">
+            <div className="grid gap-6 grid-cols-1">
                 <Card>
                     <CardHeader>
                         <CardTitle className="text-sm font-medium">{t('Effectif par Département')}</CardTitle>
                     </CardHeader>
                     <CardContent>
-                        <ResponsiveContainer width="100%" height={300}>
+                        <ResponsiveContainer width="100%" height={400}>
                             <PieChart>
-                                <Pie data={deptData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label>
+                                <Pie data={deptData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={150} label>
                                     {deptData.map((_, index) => <Cell key={index} fill={COLORS[index % COLORS.length]} />)}
                                 </Pie>
                                 <Tooltip />
@@ -141,7 +144,7 @@ export default function Reports({ departments = [] }: { departments?: any[] }) {
         const deptData = Object.entries(data.charts.byDepartment).map(([name, value]) => ({ name, value }));
 
         return (
-            <div className="grid gap-6 md:grid-cols-2">
+            <div className="grid gap-6 grid-cols-1">
                 <Card>
                     <CardHeader>
                         <CardTitle className="text-sm font-medium">{t('Absences par Date')}</CardTitle>
@@ -165,7 +168,7 @@ export default function Reports({ departments = [] }: { departments?: any[] }) {
                     <CardContent>
                         <ResponsiveContainer width="100%" height={300}>
                             <PieChart>
-                                <Pie data={deptData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80}>
+                                <Pie data={deptData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={120} label>
                                     {deptData.map((_, index) => <Cell key={index} fill={COLORS[index % COLORS.length]} />)}
                                 </Pie>
                                 <Tooltip />
@@ -177,6 +180,20 @@ export default function Reports({ departments = [] }: { departments?: any[] }) {
             </div>
         );
     };
+
+    const filteredData = data?.data?.filter((item: any) => {
+        const searchStr = filters.search.toLowerCase();
+        const nameMatch = (item.user?.name || item.employee?.name || '').toLowerCase().includes(searchStr);
+        const idMatch = (item.employee_id || item.employee?.employee?.employee_id || '').toLowerCase().includes(searchStr);
+
+        let statusMatch = true;
+        if (filters.status !== 'all') {
+            const isActive = item.user?.is_active || false;
+            statusMatch = filters.status === 'active' ? isActive : !isActive;
+        }
+
+        return (nameMatch || idMatch) && statusMatch;
+    });
 
     return (
         <PageTemplate
@@ -197,14 +214,29 @@ export default function Reports({ departments = [] }: { departments?: any[] }) {
                             <TabsTrigger value="absenteeism" className="flex items-center gap-2">
                                 <Clock className="h-4 w-4" /> {t('Absentéisme')}
                             </TabsTrigger>
+                            <TabsTrigger value="emploi" className="flex items-center gap-2">
+                                <Briefcase className="h-4 w-4" /> {t('Emploi')}
+                            </TabsTrigger>
                         </TabsList>
                     </Tabs>
 
                     <div className="flex items-center gap-2">
-                        <Button variant="outline" size="sm" onClick={() => handleExport('xlsx')} className="flex items-center gap-2 text-green-600 border-green-200 hover:bg-green-50">
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleExport('xlsx')}
+                            disabled={activeTab === 'emploi' && filters.department_id === 'all'}
+                            className="flex items-center gap-2 text-green-600 border-green-200 hover:bg-green-50"
+                        >
                             <Download className="h-4 w-4" /> Excel
                         </Button>
-                        <Button variant="outline" size="sm" onClick={() => handleExport('pdf')} className="flex items-center gap-2 text-red-600 border-red-200 hover:bg-red-50">
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleExport('pdf')}
+                            disabled={activeTab === 'emploi' && filters.department_id === 'all'}
+                            className="flex items-center gap-2 text-red-600 border-red-200 hover:bg-red-50"
+                        >
                             <FileDown className="h-4 w-4" /> PDF
                         </Button>
                     </div>
@@ -228,6 +260,36 @@ export default function Reports({ departments = [] }: { departments?: any[] }) {
                             </SelectContent>
                         </Select>
                     </div>
+                    <div className="space-y-1">
+                        <span className="text-xs font-medium text-muted-foreground">{t('Recherche')}</span>
+                        <div className="relative">
+                            <input
+                                type="text"
+                                placeholder={t('Nom ou ID...')}
+                                className="w-full flex h-10 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                                value={filters.search}
+                                onChange={(e) => setFilters({ ...filters, search: e.target.value })}
+                            />
+                        </div>
+                    </div>
+                    {activeTab === 'headcount' && (
+                        <div className="space-y-1">
+                            <span className="text-xs font-medium text-muted-foreground">{t('Statut')}</span>
+                            <Select
+                                value={filters.status}
+                                onValueChange={(val) => setFilters({ ...filters, status: val })}
+                            >
+                                <SelectTrigger>
+                                    <SelectValue placeholder={t('Tous les statuts')} />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">{t('Tous les statuts')}</SelectItem>
+                                    <SelectItem value="active">{t('Actif')}</SelectItem>
+                                    <SelectItem value="inactive">{t('Inactif')}</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                    )}
                     {activeTab === 'leave' && (
                         <div className="space-y-1">
                             <span className="text-xs font-medium text-muted-foreground">{t('Année')}</span>
@@ -248,6 +310,15 @@ export default function Reports({ departments = [] }: { departments?: any[] }) {
                     )}
                 </div>
 
+                {activeTab === 'emploi' && filters.department_id === 'all' && (
+                    <div className="bg-yellow-50 border border-yellow-200 p-4 rounded-lg flex items-center gap-3 text-yellow-800">
+                        <Clock className="h-5 w-5" />
+                        <p className="text-sm font-medium">
+                            {t('Veuillez sélectionner un département spécifique pour afficher le rapport d\'emploi.')}
+                        </p>
+                    </div>
+                )}
+
                 {loading ? (
                     <div className="flex items-center justify-center p-20">
                         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
@@ -257,6 +328,7 @@ export default function Reports({ departments = [] }: { departments?: any[] }) {
                         {activeTab === 'headcount' && renderHeadcountCharts()}
                         {activeTab === 'leave' && renderLeaveCharts()}
                         {activeTab === 'absenteeism' && renderAbsenteeismCharts()}
+                        {activeTab === 'emploi' && filters.department_id !== 'all' && renderHeadcountCharts()}
 
                         <Card>
                             <CardHeader>
@@ -276,8 +348,8 @@ export default function Reports({ departments = [] }: { departments?: any[] }) {
                                             </tr>
                                         </thead>
                                         <tbody>
-                                            {data?.data?.length > 0 ? (
-                                                data.data.map((item: any, idx: number) => (
+                                            {filteredData?.length > 0 ? (
+                                                filteredData.map((item: any, idx: number) => (
                                                     <tr key={idx} className="border-b hover:bg-muted/10 transition-colors">
                                                         <td className="p-3">
                                                             <div className="font-medium">{item.user?.name || item.employee?.name || t('N/A')}</div>
@@ -288,6 +360,12 @@ export default function Reports({ departments = [] }: { departments?: any[] }) {
                                                                 <>
                                                                     <div>{item.department?.name}</div>
                                                                     <div className="text-muted-foreground">{item.designation?.name}</div>
+                                                                </>
+                                                            )}
+                                                            {activeTab === 'emploi' && (
+                                                                <>
+                                                                    <div>{item.department?.name}</div>
+                                                                    <div className="text-muted-foreground">{item.personnel_type}</div>
                                                                 </>
                                                             )}
                                                             {activeTab === 'leave' && (

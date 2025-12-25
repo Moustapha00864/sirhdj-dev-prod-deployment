@@ -6,8 +6,10 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { useTranslation } from 'react-i18next';
 import { usePage } from '@inertiajs/react';
-import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid, Legend, LineChart, Line, AreaChart, Area } from 'recharts';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid, Legend, LineChart, Line, AreaChart, Area, PieChart as PieChartIcon } from 'recharts';
 import { format } from 'date-fns';
+
+const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899'];
 
 interface CompanyDashboardData {
   stats: {
@@ -33,14 +35,22 @@ interface CompanyDashboardData {
     leaveTypesStats: Array<{ name: string; value: number; color: string }>;
     employeeGrowthChart: Array<{ month: string; employees: number }>;
     leavePerDepartment: Array<{ name: string; value: number }>;
+    ageDistribution: Array<{ age_group: string; total: number }>;
+    genderByPersonnelType: Array<{ type: string; male: number; female: number }>;
+    maritalStatusStats: Array<{ name: string; value: number }>;
   };
+  tables: {
+    staffByYearAndContract: Array<any>;
+    medicalStaffStats: Array<any>;
+    techniqueStaffStats: Array<any>;
+  };
+  userType: string;
   recentActivities: {
     leaves: Array<any>;
     candidates: Array<any>;
     announcements: Array<any>;
     meetings: Array<any>;
   };
-  userType: string;
 }
 
 interface PageAction {
@@ -100,6 +110,28 @@ export default function Dashboard({ dashboardData }: { dashboardData: CompanyDas
 
   const userType = dashboardData?.userType || 'employee';
   const isCompanyUser = userType === 'company';
+
+  const [searchStaff, setSearchStaff] = React.useState('');
+  const [searchMedical, setSearchMedical] = React.useState('');
+  const [searchTechnique, setSearchTechnique] = React.useState('');
+
+  const tables = dashboardData?.tables || {
+    staffByYearAndContract: [],
+    medicalStaffStats: [],
+    techniqueStaffStats: []
+  };
+
+  const filteredStaff = tables.staffByYearAndContract.filter(item =>
+    item.year.toString().includes(searchStaff)
+  );
+
+  const filteredMedical = tables.medicalStaffStats.filter(item =>
+    item.specialty.toLowerCase().includes(searchMedical.toLowerCase())
+  );
+
+  const filteredTechnique = tables.techniqueStaffStats.filter(item =>
+    item.specialty.toLowerCase().includes(searchTechnique.toLowerCase())
+  );
 
   const getStatusColor = (status: string) => {
     const colors = {
@@ -581,6 +613,219 @@ export default function Dashboard({ dashboardData }: { dashboardData: CompanyDas
                   {t('No recent meetings')}
                 </div>
               )}
+            </CardContent>
+          </Card>
+        </div>
+
+
+        {/* Detailed Statistics Charts */}
+        <div className="grid gap-6 lg:grid-cols-3">
+          {/* Age Distribution */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg font-semibold">
+                <BarChart3 className="h-5 w-5" />
+                {t('Age Distribution')}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {charts.ageDistribution?.length > 0 ? (
+                <ResponsiveContainer width="100%" height={240}>
+                  <BarChart data={charts.ageDistribution}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="age_group" />
+                    <YAxis />
+                    <Tooltip />
+                    <Bar dataKey="total" fill="#3b82f6" name={t('Employees')} />
+                  </BarChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">{t('No data')}</div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Marital Status */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg font-semibold">
+                <PieChartIcon className="h-5 w-5" />
+                {t('Marital Status')}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {charts.maritalStatusStats?.length > 0 ? (
+                <ResponsiveContainer width="100%" height={240}>
+                  <PieChart>
+                    <Pie
+                      data={charts.maritalStatusStats}
+                      cx="50%"
+                      cy="50%"
+                      outerRadius={80}
+                      dataKey="value"
+                      label
+                    >
+                      {charts.maritalStatusStats.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip />
+                    <Legend />
+                  </PieChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">{t('No data')}</div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Gender by Personnel Type */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg font-semibold">
+                <BarChart3 className="h-5 w-5" />
+                {t('Gender by Personnel Type')}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {charts.genderByPersonnelType?.length > 0 ? (
+                <ResponsiveContainer width="100%" height={240}>
+                  <BarChart data={charts.genderByPersonnelType}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="type" />
+                    <YAxis />
+                    <Tooltip />
+                    <Legend />
+                    <Bar dataKey="male" stackId="a" fill="#3b82f6" name={t('Male')} />
+                    <Bar dataKey="female" stackId="a" fill="#ec4899" name={t('Female')} />
+                  </BarChart>
+                </ResponsiveContainer>
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">{t('No data')}</div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Detailed Tables */}
+        <div className="grid gap-6 lg:grid-cols-2">
+          {/* Staff Distribution by Year and Contract */}
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-lg font-semibold">{t('Staff by Year & Contract')}</CardTitle>
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  placeholder={t('Search year...')}
+                  className="text-xs border rounded px-2 py-1 outline-none focus:ring-1 ring-blue-500"
+                  value={searchStaff}
+                  onChange={(e) => setSearchStaff(e.target.value)}
+                />
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="max-h-[300px] overflow-auto">
+                <table className="w-full text-sm">
+                  <thead className="sticky top-0 bg-white">
+                    <tr className="text-left border-b font-medium text-muted-foreground">
+                      <th className="pb-2">{t('Year')}</th>
+                      <th className="pb-2">CDD</th>
+                      <th className="pb-2">CDI</th>
+                      <th className="pb-2">Autre</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredStaff.map((row, idx) => (
+                      <tr key={idx} className="border-b last:border-0">
+                        <td className="py-2 font-medium">{row.year}</td>
+                        <td className="py-2">{row.CDD || 0}</td>
+                        <td className="py-2">{row.CDI || 0}</td>
+                        <td className="py-2">{row.Autre || 0}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Medical Corps Composition */}
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-lg font-semibold">{t('Medical Corps Composition')}</CardTitle>
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  placeholder={t('Search specialty...')}
+                  className="text-xs border rounded px-2 py-1 outline-none focus:ring-1 ring-blue-500"
+                  value={searchMedical}
+                  onChange={(e) => setSearchMedical(e.target.value)}
+                />
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="max-h-[300px] overflow-auto">
+                <table className="w-full text-sm">
+                  <thead className="sticky top-0 bg-white">
+                    <tr className="text-left border-b font-medium text-muted-foreground">
+                      <th className="pb-2">{t('Specialty')}</th>
+                      <th className="pb-2">{t('Male')}</th>
+                      <th className="pb-2">{t('Female')}</th>
+                      <th className="pb-2">{t('Total')}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredMedical.map((row, idx) => (
+                      <tr key={idx} className="border-b last:border-0">
+                        <td className="py-2 font-medium">{row.specialty}</td>
+                        <td className="py-2 text-blue-600">{row.male}</td>
+                        <td className="py-2 text-pink-600">{row.female}</td>
+                        <td className="py-2 font-bold">{row.total}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* T/S Staff Composition */}
+          <Card className="lg:col-span-2">
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-lg font-semibold">{t('T/S Staff Composition')}</CardTitle>
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  placeholder={t('Search specialty...')}
+                  className="text-xs border rounded px-2 py-1 outline-none focus:ring-1 ring-blue-500"
+                  value={searchTechnique}
+                  onChange={(e) => setSearchTechnique(e.target.value)}
+                />
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="max-h-[300px] overflow-auto">
+                <table className="w-full text-sm">
+                  <thead className="sticky top-0 bg-white">
+                    <tr className="text-left border-b font-medium text-muted-foreground">
+                      <th className="pb-2">{t('Specialty')}</th>
+                      <th className="pb-2">{t('Male')}</th>
+                      <th className="pb-2">{t('Female')}</th>
+                      <th className="pb-2">{t('Total')}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredTechnique.map((row, idx) => (
+                      <tr key={idx} className="border-b last:border-0">
+                        <td className="py-2 font-medium">{row.specialty}</td>
+                        <td className="py-2">{row.male}</td>
+                        <td className="py-2">{row.female}</td>
+                        <td className="py-2 font-bold">{row.male + row.female}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </CardContent>
           </Card>
         </div>

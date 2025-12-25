@@ -408,6 +408,105 @@ class DashboardController extends Controller
             ->take(5)
             ->get();
 
+        // 1. Age Distribution Groups
+        $ageDistribution = \App\Models\Employee::whereIn('created_by', $companyUserIds)
+            ->whereNotNull('date_of_birth')
+            ->selectRaw("
+                CASE 
+                    WHEN TIMESTAMPDIFF(YEAR, date_of_birth, CURDATE()) <= 25 THEN '0-25'
+                    WHEN TIMESTAMPDIFF(YEAR, date_of_birth, CURDATE()) <= 35 THEN '25-35'
+                    WHEN TIMESTAMPDIFF(YEAR, date_of_birth, CURDATE()) <= 45 THEN '35-45'
+                    WHEN TIMESTAMPDIFF(YEAR, date_of_birth, CURDATE()) <= 55 THEN '45-55'
+                    ELSE '55+'
+                END as age_group,
+                COUNT(*) as total
+            ")
+            ->groupBy('age_group')
+            ->orderBy('age_group')
+            ->get();
+
+        // 2. Gender Distribution by Personnel Type
+        $genderByPersonnelType = \App\Models\Employee::whereIn('created_by', $companyUserIds)
+            ->selectRaw('personnel_type, gender, COUNT(*) as total')
+            ->groupBy('personnel_type', 'gender')
+            ->get()
+            ->groupBy('personnel_type')
+            ->map(function ($items, $type) {
+                return [
+                    'type' => $type ?? 'Non défini',
+                    'male' => $items->where('gender', 'male')->sum('total'),
+                    'female' => $items->where('gender', 'female')->sum('total'),
+                ];
+            })->values();
+
+        // 3. Marital Status Distribution
+        $maritalStatusStats = \App\Models\Employee::whereIn('created_by', $companyUserIds)
+            ->selectRaw('matrimonial_status, COUNT(*) as total')
+            ->groupBy('matrimonial_status')
+            ->get()
+            ->map(function ($item) {
+                return [
+                    'name' => $item->matrimonial_status ?? 'Non défini',
+                    'value' => $item->total,
+                ];
+            });
+
+        // 4. Staff Distribution by Year and Contract Type
+        $staffByYearAndContract = \App\Models\Employee::whereIn('created_by', $companyUserIds)
+            ->whereNotNull('date_of_joining')
+            ->with('contractType')
+            ->selectRaw('YEAR(date_of_joining) as year, contract_type_id, COUNT(*) as total')
+            ->groupBy('year', 'contract_type_id')
+            ->orderBy('year', 'desc')
+            ->get()
+            ->groupBy('year')
+            ->map(function ($items, $year) {
+                $row = ['year' => $year];
+                foreach ($items as $item) {
+                    $contractName = $item->contractType->name ?? 'Autre';
+                    $row[$contractName] = $item->total;
+                }
+                return $row;
+            })->values()->take(10); // Last 10 years
+
+        // 5. Medical Corps Composition by Specialty and Gender
+        $medicalStaffStats = \App\Models\Employee::whereIn('created_by', $companyUserIds)
+            ->where('personnel_type', 'LIKE', '%MEDICAL%')
+            ->with('designation')
+            ->selectRaw('designation_id, gender, COUNT(*) as total')
+            ->groupBy('designation_id', 'gender')
+            ->get()
+            ->groupBy('designation_id')
+            ->map(function ($items, $designationId) {
+                $designation = \App\Models\Designation::find($designationId);
+                return [
+                    'specialty' => $designation->name ?? 'Non défini',
+                    'male' => $items->where('gender', 'male')->sum('total'),
+                    'female' => $items->where('gender', 'female')->sum('total'),
+                    'total' => $items->sum('total')
+                ];
+            })->values();
+
+        // 6. T/S Staff Composition by Specialty and Gender
+        $techniqueStaffStats = \App\Models\Employee::whereIn('created_by', $companyUserIds)
+            ->where(function ($q) {
+                $q->where('personnel_type', 'LIKE', '%TECHNIQUE%')
+                    ->orWhere('personnel_type', 'LIKE', '%T/S%');
+            })
+            ->with('designation')
+            ->selectRaw('designation_id, gender, COUNT(*) as total')
+            ->groupBy('designation_id', 'gender')
+            ->get()
+            ->groupBy('designation_id')
+            ->map(function ($items, $designationId) {
+                $designation = \App\Models\Designation::find($designationId);
+                return [
+                    'specialty' => $designation->name ?? 'Non défini',
+                    'male' => $items->where('gender', 'male')->sum('total'),
+                    'female' => $items->where('gender', 'female')->sum('total'),
+                ];
+            })->values();
+
         $dashboardData = [
             'stats' => [
                 'totalEmployees' => $totalEmployees,
@@ -430,7 +529,15 @@ class DashboardController extends Controller
                 'candidateStatusStats' => $candidateStatusStats,
                 'leaveTypesStats' => $leaveTypesStats,
                 'employeeGrowthChart' => $employeeGrowthChart,
-                'leavePerDepartment' => $leavePerDepartment
+                'leavePerDepartment' => $leavePerDepartment,
+                'ageDistribution' => $ageDistribution,
+                'genderByPersonnelType' => $genderByPersonnelType,
+                'maritalStatusStats' => $maritalStatusStats,
+            ],
+            'tables' => [
+                'staffByYearAndContract' => $staffByYearAndContract,
+                'medicalStaffStats' => $medicalStaffStats,
+                'techniqueStaffStats' => $techniqueStaffStats,
             ],
             'recentActivities' => [
                 'leaves' => $recentLeaves,
