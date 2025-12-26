@@ -66,11 +66,10 @@ export default function Reports({ departments = [] }: { departments?: any[] }) {
                     <CardContent>
                         <ResponsiveContainer width="100%" height={400}>
                             <PieChart>
-                                <Pie data={deptData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={150} label>
+                                <Pie data={deptData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={120}>
                                     {deptData.map((_, index) => <Cell key={index} fill={COLORS[index % COLORS.length]} />)}
                                 </Pie>
                                 <Tooltip />
-                                <Legend />
                             </PieChart>
                         </ResponsiveContainer>
                     </CardContent>
@@ -91,7 +90,7 @@ export default function Reports({ departments = [] }: { departments?: any[] }) {
                         </ResponsiveContainer>
                     </CardContent>
                 </Card>
-            </div>
+            </div >
         );
     };
 
@@ -125,11 +124,10 @@ export default function Reports({ departments = [] }: { departments?: any[] }) {
                     <CardContent>
                         <ResponsiveContainer width="100%" height={300}>
                             <PieChart>
-                                <Pie data={typeData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} innerRadius={40}>
+                                <Pie data={typeData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={100} innerRadius={60}>
                                     {typeData.map((_, index) => <Cell key={index} fill={COLORS[index % COLORS.length]} />)}
                                 </Pie>
                                 <Tooltip />
-                                <Legend />
                             </PieChart>
                         </ResponsiveContainer>
                     </CardContent>
@@ -168,11 +166,10 @@ export default function Reports({ departments = [] }: { departments?: any[] }) {
                     <CardContent>
                         <ResponsiveContainer width="100%" height={300}>
                             <PieChart>
-                                <Pie data={deptData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={120} label>
+                                <Pie data={deptData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={100}>
                                     {deptData.map((_, index) => <Cell key={index} fill={COLORS[index % COLORS.length]} />)}
                                 </Pie>
                                 <Tooltip />
-                                <Legend />
                             </PieChart>
                         </ResponsiveContainer>
                     </CardContent>

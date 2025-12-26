@@ -85,7 +85,7 @@ class ReportController extends Controller
             return $month->sum('total_days');
         });
 
-        $byType = $leaves->groupBy('leaveType.title')->map->count();
+        $byType = $leaves->groupBy('leaveType.name')->map->count();
 
         return response()->json([
             'data' => $leaves,
