@@ -131,6 +131,13 @@ export function AppSidebar() {
             icon: BarChart,
         });
 
+        // Employee Self Service - My Leaves
+        items.push({
+            title: t('My Leave Applications'),
+            href: route('my-leave-applications.index'),
+            icon: CalendarDays,
+        });
+
         // Staff section - only show if user has any staff-related permissions
         const staffChildren = [];
         if (hasPermission(permissions, 'manage-users')) {

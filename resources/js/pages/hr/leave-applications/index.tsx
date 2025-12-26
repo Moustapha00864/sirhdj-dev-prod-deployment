@@ -154,7 +154,7 @@ export default function LeaveApplications() {
     toast.loading(t('Deleting leave application...'));
 
     router.delete(route('hr.leave-applications.destroy', currentItem.id), {
-      onSuccess: (page : any) => {
+      onSuccess: (page: any) => {
         setIsDeleteModalOpen(false);
         toast.dismiss();
         if (page.props.flash.success) {
@@ -182,7 +182,7 @@ export default function LeaveApplications() {
       status,
       manager_comments: '' // Add empty manager_comments to avoid undefined key error
     }, {
-      onSuccess: (page : any) => {
+      onSuccess: (page: any) => {
         toast.dismiss();
         if (page.props.flash.success) {
           toast.success(t(page.props.flash.success));
@@ -264,21 +264,8 @@ export default function LeaveApplications() {
         />
       )
     },
-    {
-      key: 'start_date',
-      label: t('Start Date'),
-      sortable: true,
-      // render: (value: string) => new Date(value).toLocaleDateString()
-      render: (value: string) => window.appSettings?.formatDateTime(value, false) || new Date(value).toLocaleDateString()
 
-    },
-    {
-      key: 'end_date',
-      label: t('End Date'),
-      sortable: true,
-      // render: (value: string) => new Date(value).toLocaleDateString()
-      render: (value: string) => window.appSettings?.formatDateTime(value, false) || new Date(value).toLocaleDateString()
-    },
+
     {
       key: 'total_days',
       label: t('Days'),
@@ -302,12 +289,7 @@ export default function LeaveApplications() {
         );
       }
     },
-    {
-      key: 'created_at',
-      label: t('Applied On'),
-      sortable: true,
-      render: (value: string) => window.appSettings?.formatDateTime(value, false) || new Date(value).toLocaleDateString()
-    }
+
   ];
 
   // Define table actions

@@ -439,12 +439,12 @@ Route::middleware(['auth', 'verified', 'setting'])->group(function () {
 
         // Report Routes
         // Route::middleware('permission:manage-reports')->group(function () {
-            Route::get('hr/reports', [ReportController::class, 'index'])->name('hr.reports.index');
-            Route::get('hr/reports/headcount', [ReportController::class, 'getHeadcountReport'])->name('hr.reports.headcount');
-            Route::get('hr/reports/leave', [ReportController::class, 'getLeaveReport'])->name('hr.reports.leave');
-            Route::get('hr/reports/absenteeism', [ReportController::class, 'getAbsenteeismReport'])->name('hr.reports.absenteeism');
-            Route::get('hr/reports/emploi', [ReportController::class, 'getEmploiReport'])->name('hr.reports.emploi');
-            Route::get('hr/reports/export', [ReportController::class, 'export'])->name('hr.reports.export');
+        Route::get('hr/reports', [ReportController::class, 'index'])->name('hr.reports.index');
+        Route::get('hr/reports/headcount', [ReportController::class, 'getHeadcountReport'])->name('hr.reports.headcount');
+        Route::get('hr/reports/leave', [ReportController::class, 'getLeaveReport'])->name('hr.reports.leave');
+        Route::get('hr/reports/absenteeism', [ReportController::class, 'getAbsenteeismReport'])->name('hr.reports.absenteeism');
+        Route::get('hr/reports/emploi', [ReportController::class, 'getEmploiReport'])->name('hr.reports.emploi');
+        Route::get('hr/reports/export', [ReportController::class, 'export'])->name('hr.reports.export');
         // });
 
         // Trip Routes
@@ -981,6 +981,10 @@ Route::middleware(['auth', 'verified', 'setting'])->group(function () {
             Route::put('hr/leave-applications/{leaveApplication}/status', [\App\Http\Controllers\LeaveApplicationController::class, 'updateStatus'])->middleware('permission:approve-leave-applications')->name('hr.leave-applications.update-status');
             Route::get('hr/leave-applications/{leave}/download-summary', [\App\Http\Controllers\LeaveApplicationController::class, 'downloadSummary'])->name('hr.leave-applications.download-summary');
         });
+
+        // Employee 'My Leave' Route (view proper to employee)
+        Route::get('my-leave-applications', [\App\Http\Controllers\LeaveApplicationController::class, 'index'])->name('my-leave-applications.index');
+
 
         // Leave Settings routes
         Route::middleware('permission:manage-leave-settings')->group(function () {
