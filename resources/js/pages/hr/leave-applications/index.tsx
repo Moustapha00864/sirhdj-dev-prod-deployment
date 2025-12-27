@@ -315,24 +315,7 @@ export default function LeaveApplications() {
       action: 'approve',
       className: 'text-green-500',
       requiredPermission: 'approve-leave-applications',
-      condition: (item: any) => {
-        if (item.status !== 'pending') return false;
-
-        // Stage 1: Department Manager
-        if (item.current_stage === 1) {
-          // Check if current user is the manager of this department OR admin
-          return hasPermission(permissions, 'approve-leave-applications');
-          // Better check in controller, but for UI visibility we rely on general permission 
-          // or we could pass specific current_user_is_manager flag from backend.
-        }
-
-        // Stage 2: HR
-        if (item.current_stage === 2) {
-          return hasPermission(permissions, 'approve-leave-applications');
-        }
-
-        return false;
-      }
+      condition: (item: any) => item.can_action
     },
     {
       label: t('Reject'),
@@ -340,7 +323,7 @@ export default function LeaveApplications() {
       action: 'reject',
       className: 'text-red-500',
       requiredPermission: 'reject-leave-applications',
-      condition: (item: any) => item.status === 'pending'
+      condition: (item: any) => item.can_action
     },
     {
       label: t('Delete'),

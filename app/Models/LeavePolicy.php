@@ -18,6 +18,7 @@ class LeavePolicy extends BaseModel
         'carry_forward_limit',
         'min_days_per_application',
         'max_days_per_application',
+        'max_days_per_year',
         'requires_approval',
         'status',
         'created_by'

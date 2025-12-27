@@ -11,8 +11,8 @@ return new class extends Migration {
     public function up(): void
     {
         Schema::table('leave_applications', function (Blueprint $table) {
-            $table->integer('current_stage')->default(1)->after('status');
-            $table->boolean('is_completed')->default(false)->after('current_stage');
+            // $table->integer('current_stage')->default(1)->after('status');
+            // $table->boolean('is_completed')->default(false)->after('current_stage');
         });
     }
 

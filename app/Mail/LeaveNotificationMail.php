@@ -20,11 +20,12 @@ class LeaveNotificationMail extends Mailable
     public $comments;
     public $manager;
     public $approver;
+    public $pdfPath;
 
     /**
      * Create a new message instance.
      */
-    public function __construct($leave, $recipient, $template, $subjectStr, $comments = null, $approver = null)
+    public function __construct($leave, $recipient, $template, $subjectStr, $comments = null, $approver = null, $pdfPath = null)
     {
         $this->leave = $leave;
         $this->recipient = $recipient;
@@ -32,6 +33,7 @@ class LeaveNotificationMail extends Mailable
         $this->subjectStr = $subjectStr;
         $this->comments = $comments;
         $this->approver = $approver;
+        $this->pdfPath = $pdfPath;
 
         // Get the Employee model (not the User)
         $this->employee = $leave->employee->employee ?? null;
@@ -82,6 +84,14 @@ class LeaveNotificationMail extends Mailable
      */
     public function attachments(): array
     {
-        return [];
+        $attachments = [];
+
+        if ($this->pdfPath && file_exists($this->pdfPath)) {
+            $attachments[] = \Illuminate\Mail\Mailables\Attachment::fromPath($this->pdfPath)
+                ->as('leave_confirmation.pdf')
+                ->withMime('application/pdf');
+        }
+
+        return $attachments;
     }
 }

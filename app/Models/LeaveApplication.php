@@ -162,4 +162,42 @@ class LeaveApplication extends BaseModel
         $leaveBalance->remaining_days = $leaveBalance->allocated_days - $leaveBalance->used_days;
         $leaveBalance->save();
     }
+
+    protected $appends = ['can_action'];
+
+    /**
+     * Check if the authenticated user can perform approval/rejection on this application.
+     */
+    public function getCanActionAttribute()
+    {
+        if ($this->status !== 'pending') {
+            return false;
+        }
+
+        $user = auth()->user();
+        if (!$user) {
+            return false;
+        }
+
+        if ($user->hasRole('Admin')) {
+            return true;
+        }
+
+        // Need to load employee details to check department relationship
+        // This might arguably be better in a Policy/Gateway, but for attribute simplicity:
+        $department = $this->employee->employee->department ?? null;
+
+        switch ($this->current_stage) {
+            case 1:
+                return $department && $department->manager_id === $user->id;
+            case 2:
+                return $department && $department->validator2_id === $user->id;
+            case 3:
+                return $user->hasRole('HR Generalist');
+            case 4:
+                return $user->hasRole('Director');
+            default:
+                return false;
+        }
+    }
 }

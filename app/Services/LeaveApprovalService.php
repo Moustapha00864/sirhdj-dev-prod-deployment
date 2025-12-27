@@ -12,6 +12,13 @@ use Illuminate\Support\Facades\Mail;
 
 class LeaveApprovalService
 {
+    protected $pdfService;
+
+    public function __construct(\App\Services\LeavePdfService $pdfService)
+    {
+        $this->pdfService = $pdfService;
+    }
+
     public function approve(LeaveApplication $leave, User $approver, string $comments = null)
     {
         return DB::transaction(function () use ($leave, $approver, $comments) {
@@ -58,12 +65,19 @@ class LeaveApprovalService
                 // Update used_days and remaining_days on balance
                 $this->updateLeaveBalance($leave);
 
+                // Generate PDF
+                $pdfPath = $this->pdfService->saveSummaryToStorage($leave);
+                $fullPdfPath = storage_path('app/public/' . $pdfPath);
+
                 // Send final notification to employee
                 Mail::to($leave->employee->email)->send(new \App\Mail\LeaveNotificationMail(
                     $leave,
                     $leave->employee,
                     'employee_final_approved',
-                    'Félicitations – Votre demande de congé est validée'
+                    'Félicitations – Votre demande de congé est validée',
+                    null,
+                    null,
+                    $fullPdfPath
                 ));
             } else {
                 $leave->update(['current_stage' => $nextStage]);
@@ -147,11 +161,9 @@ class LeaveApprovalService
             $template = 'hr_validation';
             $subject = 'Alerte – Validation RH requise pour une demande de congé';
         } elseif ($nextStage === 4) {
-            if ($department && $department->director) {
-                $recipients[] = $department->director;
-                $template = 'director_validation';
-                $subject = 'Alerte – Validation Direction requise pour une demande de congé';
-            }
+            $recipients = User::role('Director')->get();
+            $template = 'director_validation';
+            $subject = 'Alerte – Validation Direction requise pour une demande de congé';
         }
 
         foreach ($recipients as $recipient) {
@@ -237,7 +249,7 @@ class LeaveApprovalService
                 }
                 break;
             case 4:
-                if (!$department || $approver->id !== $department->director_id) {
+                if (!$approver->hasRole('Director')) {
                     abort(403, __('Seul le directeur peut approuver à l’étape 4'));
                 }
                 break;
