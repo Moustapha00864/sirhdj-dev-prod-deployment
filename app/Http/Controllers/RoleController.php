@@ -13,7 +13,6 @@ class RoleController extends BaseController
     /**
      * Constructor to apply middleware
      */
-   
 
     /**
      * Display a listing of the resource.
@@ -25,7 +24,7 @@ class RoleController extends BaseController
         $permissions = $this->getFilteredPermissions();
 
         return Inertia::render('roles/index', [
-            'roles'       => $roles,
+            'roles' => $roles,
             'permissions' => $permissions,
         ]);
     }
@@ -37,33 +36,33 @@ class RoleController extends BaseController
     {
         $user = Auth::user();
         $userType = $user->type ?? 'company';
-        
+
         // Superadmin can see all permissions
         if ($userType === 'superadmin' || $userType === 'super admin') {
             return Permission::all()->groupBy('module');
         }
-        
+
         // Get allowed modules for current user role
-        $allowedModules = config('role-permissions.' . $userType, config('role-permissions.company'));        
-        
+        $allowedModules = config('role-permissions.' . $userType, config('role-permissions.company'));
+
         // Filter permissions by allowed modules
         $query = Permission::whereIn('module', $allowedModules);
-        
+
         // For company users, filter specific settings permissions
         if ($userType === 'company') {
             // When in settings module, only show email, system and brand settings permissions
-            $query->where(function($q) {
+            $query->where(function ($q) {
                 $q->where('module', '!=', 'settings')
-                  ->orWhereIn('name', [
-                      'manage-email-settings',
-                      'manage-system-settings',
-                      'manage-brand-settings'
-                  ]);
+                    ->orWhereIn('name', [
+                        'manage-email-settings',
+                        'manage-system-settings',
+                        'manage-brand-settings'
+                    ]);
             });
         }
-        
+
         $permissions = $query->get()->groupBy('module');
-        
+
         return $permissions;
     }
 
@@ -74,33 +73,33 @@ class RoleController extends BaseController
     {
         $user = Auth::user();
         $userType = $user->type ?? 'company';
-        
+
         // Superadmin can assign any permission
         if ($userType === 'superadmin' || $userType === 'super admin') {
             return $permissionNames;
         }
-        
+
         // Get allowed modules for current user role
         $allowedModules = config('role-permissions.' . $userType, config('role-permissions.company'));
-        
+
         // Build query to get valid permissions
         $query = Permission::whereIn('module', $allowedModules)
             ->whereIn('name', $permissionNames);
-        
+
         // For company users, restrict settings permissions to only email, system and brand settings
         if ($userType === 'company') {
-            $query->where(function($q) {
+            $query->where(function ($q) {
                 $q->where('module', '!=', 'settings')
-                  ->orWhereIn('name', [
-                      'manage-email-settings',
-                      'manage-system-settings',
-                      'manage-brand-settings'
-                  ]);
+                    ->orWhereIn('name', [
+                        'manage-email-settings',
+                        'manage-system-settings',
+                        'manage-brand-settings'
+                    ]);
             });
         }
-        
+
         $validPermissions = $query->pluck('name')->toArray();
-        
+
         return $validPermissions;
     }
 
@@ -119,7 +118,7 @@ class RoleController extends BaseController
     {
         // Validate permissions against user's allowed modules
         $validatedPermissions = $this->validatePermissions($request->permissions ?? []);
-        
+
         // Use direct model creation to bypass Spatie's duplicate check
         $role = new Role();
         $role->label = $request->label;
@@ -161,15 +160,15 @@ class RoleController extends BaseController
         if ($role) {
             // Validate permissions against user's allowed modules
             $validatedPermissions = $this->validatePermissions($request->permissions ?? []);
-            
+
             $newSlug = Str::slug($request->label);
-            
+
             // Only update name if it's different to avoid duplicate key error
             if ($role->name !== $newSlug) {
                 $role->name = $newSlug;
             }
-            
-            $role->label       = $request->label;
+
+            $role->label = $request->label;
             $role->description = $request->description;
 
             $role->save();
@@ -193,7 +192,7 @@ class RoleController extends BaseController
             if ($role->is_system_role) {
                 return redirect()->back()->with('error', __('System roles cannot be deleted!'));
             }
-            
+
             $role->delete();
 
             return redirect()->route('roles.index')->with('success', __('Role deleted successfully!'));

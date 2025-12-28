@@ -38,6 +38,7 @@ class User extends BaseAuthenticatable implements MustVerifyEmail
         'google2fa_secret',
         'status',
         'active_module',
+        'must_change_password',
     ];
 
     /**
@@ -59,7 +60,8 @@ class User extends BaseAuthenticatable implements MustVerifyEmail
                 'is_trial',
                 'trial_day',
                 'trial_expire_date',
-                'commission_amount'
+                'commission_amount',
+                'must_change_password'
             ]);
         }
         return $fillable;
@@ -93,6 +95,7 @@ class User extends BaseAuthenticatable implements MustVerifyEmail
             'is_enable_login' => 'integer',
             'google2fa_enable' => 'integer',
             'storage_limit' => 'float',
+            'must_change_password' => 'boolean',
         ];
     }
 

@@ -389,6 +389,7 @@ export default function Users() {
   return (
     <PageTemplate
       title={t("Users Management")}
+      description={t("Manage system users, roles, and permissions")}
       url="/users"
       actions={pageActions}
       breadcrumbs={breadcrumbs}
@@ -437,7 +438,7 @@ export default function Users() {
             router.get(route('users.index'), params, { preserveState: true, preserveScroll: true });
           }}
           showViewToggle={true}
-          activeView={activeView}
+          activeView={activeView as "list" | "grid"}
           onViewChange={setActiveView}
         />
       </div>
@@ -457,7 +458,6 @@ export default function Users() {
             permissions={permissions}
             entityPermissions={{
               view: 'view-users',
-              create: 'create-users',
               edit: 'edit-users',
               delete: 'delete-users'
             }}
@@ -676,7 +676,9 @@ export default function Users() {
                 const roleId = Array.isArray(formData.roles) ? formData.roles[0] : formData.roles;
                 const selectedRole = roles?.find((r: any) => r.id.toString() === roleId.toString());
                 const roleName = selectedRole?.name?.toLowerCase();
-                return roleName === 'manager' || roleName === 'hr';
+                // Hide for HR as per requirement
+                if (roleName?.includes('hr')) return false;
+                return roleName === 'manager' || roleName === 'department manager';
               }
             },
             {
@@ -693,7 +695,9 @@ export default function Users() {
                 const roleId = Array.isArray(formData.roles) ? formData.roles[0] : formData.roles;
                 const selectedRole = roles?.find((r: any) => r.id.toString() === roleId.toString());
                 const roleName = selectedRole?.name?.toLowerCase();
-                return roleName === 'manager' || roleName === 'hr';
+                // Hide for HR as per requirement
+                if (roleName?.includes('hr')) return false;
+                return roleName === 'manager' || roleName === 'department manager';
               }
             }
           ],

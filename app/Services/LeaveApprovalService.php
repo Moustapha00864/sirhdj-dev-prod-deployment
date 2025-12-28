@@ -63,7 +63,8 @@ class LeaveApprovalService
                 ]);
 
                 // Update used_days and remaining_days on balance
-                $this->updateLeaveBalance($leave);
+                // REMOVED: Managed by $leave->createAttendanceRecords()
+                // $this->updateLeaveBalance($leave);
 
                 // Generate PDF
                 $pdfPath = $this->pdfService->saveSummaryToStorage($leave);

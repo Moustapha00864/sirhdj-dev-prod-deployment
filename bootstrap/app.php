@@ -12,8 +12,8 @@ use Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
-        web: __DIR__.'/../routes/web.php',
-        commands: __DIR__.'/../routes/console.php',
+        web: __DIR__ . '/../routes/web.php',
+        commands: __DIR__ . '/../routes/console.php',
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware) {
@@ -26,6 +26,7 @@ return Application::configure(basePath: dirname(__DIR__))
             HandleInertiaRequests::class,
             AddLinkHeadersForPreloadedAssets::class,
             DemoModeMiddleware::class,
+            \App\Http\Middleware\CheckPasswordChange::class,
         ]);
 
         $middleware->alias([
@@ -35,25 +36,25 @@ return Application::configure(basePath: dirname(__DIR__))
             'landing.enabled' => \App\Http\Middleware\CheckLandingPageEnabled::class,
             'verified' => App\Http\Middleware\EnsureEmailIsVerified::class,
             'plan.access' => \App\Http\Middleware\CheckPlanAccess::class,
-            'setting' =>  \App\Http\Middleware\SettingMiddleware::class,
+            'setting' => \App\Http\Middleware\SettingMiddleware::class,
             'checksaas' => \App\Http\Middleware\CheckSaas::class,
         ]);
 
         $middleware->validateCsrfTokens(
-        except: [
-            'install/*',
-            'update/*',
-            'cashfree/create-session', 
-            'cashfree/webhook',
-            'ozow/create-payment',
-            'payments/easebuzz/success',
-            'payments/aamarpay/success',
-            'payments/aamarpay/callback',
-            'payments/tap/success',
-            'payments/tap/callback',
-            'payments/benefit/success',
-            'payments/benefit/callback',
-            'payments/paytabs/callback'
+            except: [
+                'install/*',
+                'update/*',
+                'cashfree/create-session',
+                'cashfree/webhook',
+                'ozow/create-payment',
+                'payments/easebuzz/success',
+                'payments/aamarpay/success',
+                'payments/aamarpay/callback',
+                'payments/tap/success',
+                'payments/tap/callback',
+                'payments/benefit/success',
+                'payments/benefit/callback',
+                'payments/paytabs/callback'
             ],
         );
 

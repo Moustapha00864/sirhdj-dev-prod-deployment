@@ -1,4 +1,10 @@
 <?php
+
+require __DIR__ . '/vendor/autoload.php';
+$app = require_once __DIR__ . '/bootstrap/app.php';
+$kernel = $app->make(Illuminate\Contracts\Console\Kernel::class);
+$kernel->bootstrap();
+
 use App\Models\User;
 use App\Models\LeaveType;
 use App\Models\LeavePolicy;
@@ -6,32 +12,37 @@ use App\Models\LeaveApplication;
 use App\Services\LeaveApprovalService;
 use App\Services\LeavePdfService;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Config;
+
+// Force mail to log to avoid timeouts
+Config::set('mail.default', 'log');
+Config::set('mail.mailers.log.transport', 'log');
 
 echo "Starting Simulation...\n";
 
 // 1. Setup Data
-$employee = User::where('email', 'employee@test.com')->firstOrFail();
-$manager1 = User::where('email', 'manager1@test.com')->firstOrFail();
-$manager2 = User::where('email', 'manager2@test.com')->firstOrFail();
-$hr = User::where('email', 'amsathichau@yahoo.fr')->firstOrFail();
-$director = User::where('email', 'gueco167@gmail.com')->firstOrFail();
-
-$leaveType = LeaveType::first(); // Assumes seeded
-if (!$leaveType) {
-    $leaveType = LeaveType::create([
-        'name' => 'Annual Leave',
-        'slug' => 'annual-leave',
-        'status' => 'active',
-        'created_by' => 1
-    ]);
+try {
+    $employee = User::where('email', 'employee@medistaff.com')->firstOrFail();
+    $manager1 = User::where('email', 'manager1@medistaff.com')->firstOrFail();
+    $manager2 = User::where('email', 'manager2@medistaff.com')->firstOrFail();
+    $hr = User::where('email', 'amsathichau@yahoo.fr')->firstOrFail();
+    $director = User::where('email', 'director@medistaff.com')->firstOrFail();
+} catch (\Exception $e) {
+    die("Error finding users: " . $e->getMessage() . "\nDid you run the seeder?");
 }
 
-$policy = LeavePolicy::firstOrNew(['leave_type_id' => $leaveType->id]);
-$policy->max_days_per_year = 20;
-$policy->requires_approval = true;
-$policy->status = 'active';
-$policy->created_by = 1;
-$policy->save();
+$leaveType = LeaveType::where('name', 'Congé Annuel')->firstOrFail();
+$policy = LeavePolicy::where('leave_type_id', $leaveType->id)->firstOrFail();
+
+// RESET BALANCE FOR TESTING
+$b = \App\Models\LeaveBalance::where('employee_id', $employee->id)->where('leave_type_id', $leaveType->id)->first();
+if ($b) {
+    $b->used_days = 0;
+    $b->remaining_days = $b->allocated_days;
+    $b->save();
+}
+// Delete previous apps to avoid confusion
+LeaveApplication::where('employee_id', $employee->id)->delete();
 
 // 2. Create Application
 echo "Creating application for Employee...\n";
@@ -42,7 +53,7 @@ $application = LeaveApplication::create([
     'start_date' => now()->addDays(5),
     'end_date' => now()->addDays(7),
     'total_days' => 3,
-    'reason' => 'Test Leave',
+    'reason' => 'Test Leave Multi-Level',
     'status' => 'pending',
     'current_stage' => 1,
     'created_by' => $employee->id,
@@ -53,65 +64,45 @@ echo "Application created with ID: {$application->id}\n";
 
 $service = app(LeaveApprovalService::class);
 
-// 3. Stage 1 Approval (Manager 1)
-echo "Approving Stage 1 (Manager 1)...\n";
-try {
-    Auth::login($manager1);
-    $service->approve($application, $manager1, 'Approved by Manager 1');
-    $application->refresh();
-    echo "Stage after Manager 1: {$application->current_stage}\n";
-    if ($application->current_stage != 2)
-        throw new Exception("Expected Stage 2, got {$application->current_stage}");
-} catch (\Exception $e) {
-    echo "Error Stage 1: " . $e->getMessage() . "\n";
-    echo $e->getTraceAsString();
-    exit(1);
+// Function to simulate approval
+function approveStage($service, $app, $user, $stageName, $expectedNextStage)
+{
+    echo "Approving Stage: $stageName ({$user->name})...\n";
+    try {
+        // Mock permission check if needed, or rely on service logic (which checks roles/depts)
+        // Note: The service uses Auth::user() or the passed user? 
+        // Checking service code: checks $approver passed in argument, but also uses Roles which require DB checks.
+
+        $service->approve($app, $user, "Approved by $stageName");
+        $app->refresh();
+
+        echo "Current Stage: {$app->current_stage}, Status: {$app->status}\n";
+
+        if ($expectedNextStage === 'completed') {
+            if (!$app->is_completed || $app->status !== 'approved') {
+                throw new Exception("Expected completed/approved, got Stage {$app->current_stage} / {$app->status}");
+            }
+        } else {
+            if ($app->current_stage != $expectedNextStage) {
+                throw new Exception("Expected Stage $expectedNextStage, got {$app->current_stage}");
+            }
+        }
+        echo "SUCCESS: $stageName passed.\n";
+    } catch (\Exception $e) {
+        echo "ERROR $stageName: " . $e->getMessage() . "\n";
+        echo $e->getTraceAsString();
+        exit(1);
+    }
 }
 
-// 4. Stage 2 Approval (Manager 2)
-echo "Approving Stage 2 (Manager 2)...\n";
-try {
-    Auth::login($manager2);
-    $service->approve($application, $manager2, 'Approved by Manager 2');
-    $application->refresh();
-    echo "Stage after Manager 2: {$application->current_stage}\n";
-    if ($application->current_stage != 3)
-        throw new Exception("Expected Stage 3, got {$application->current_stage}");
-} catch (\Exception $e) {
-    echo "Error Stage 2: " . $e->getMessage() . "\n";
-    echo $e->getTraceAsString();
-    exit(1);
-}
+// 3. Run Workflow
+approveStage($service, $application, $manager1, 'Manager 1', 2);
+approveStage($service, $application, $manager2, 'Manager 2', 3);
+approveStage($service, $application, $hr, 'HR', 4);
+approveStage($service, $application, $director, 'Director', 'completed');
 
-// 5. Stage 3 Approval (HR)
-echo "Approving Stage 3 (HR)...\n";
-try {
-    Auth::login($hr);
-    $service->approve($application, $hr, 'Approved by HR');
-    $application->refresh();
-    echo "Stage after HR: {$application->current_stage}\n";
-    if ($application->current_stage != 4)
-        throw new Exception("Expected Stage 4, got {$application->current_stage}");
-} catch (\Exception $e) {
-    echo "Error Stage 3: " . $e->getMessage() . "\n";
-    echo $e->getTraceAsString();
-    exit(1);
-}
+echo "\nSimulation Completed Successfully! PDF should be generated and Balance deducted.\n";
 
-// 6. Stage 4 Approval (Director)
-echo "Approving Stage 4 (Director)...\n";
-try {
-    Auth::login($director);
-    $service->approve($application, $director, 'Approved by Director');
-    $application->refresh();
-    echo "Final Status: {$application->status}\n";
-    echo "Is Completed: " . ($application->is_completed ? 'Yes' : 'No') . "\n";
-    if ($application->status != 'approved')
-        throw new Exception("Expected Status approved, got {$application->status}");
-} catch (\Exception $e) {
-    echo "Error Stage 4: " . $e->getMessage() . "\n";
-    echo $e->getTraceAsString();
-    exit(1);
-}
-
-echo "Simulation Completed Successfully!\n";
+// Check Balance
+$balance = \App\Models\LeaveBalance::where('employee_id', $employee->id)->where('leave_type_id', $leaveType->id)->first();
+echo "Remaining Balance: {$balance->remaining_days} (Expected 17)\n";

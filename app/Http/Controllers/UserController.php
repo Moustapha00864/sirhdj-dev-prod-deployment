@@ -92,20 +92,18 @@ class UserController extends BaseController
             }
         }
 
-
-
         return Inertia::render('users/index', [
             'users' => $users,
             'roles' => $roles,
             'departments' => \App\Models\Department::all(),
             'planLimits' => $planLimits,
             'filters' => [
-                    'search' => $request->search ?? '',
-                    'role' => $request->role ?? 'all',
-                    'per_page' => $perPage,
-                    'sort_field' => $request->sort_field ?? 'created_at',
-                    'sort_direction' => $request->sort_direction ?? 'desc',
-                ],
+                'search' => $request->search ?? '',
+                'role' => $request->role ?? 'all',
+                'per_page' => $perPage,
+                'sort_field' => $request->sort_field ?? 'created_at',
+                'sort_direction' => $request->sort_direction ?? 'desc',
+            ],
         ]);
     }
 
@@ -143,6 +141,7 @@ class UserController extends BaseController
             'password' => Hash::make($request->password),
             'created_by' => creatorId(),
             'lang' => $userLang,
+            'must_change_password' => true,
         ]);
 
         if ($user && $request->roles) {
