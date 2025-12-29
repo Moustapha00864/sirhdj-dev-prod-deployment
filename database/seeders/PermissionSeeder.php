@@ -825,6 +825,7 @@ class PermissionSeeder extends Seeder
             ['name' => 'manage-time-entries', 'module' => 'time_entries', 'label' => 'Manage Time Entries', 'description' => 'Can manage time entries'],
             // Reports management
             ['name' => 'manage-reports', 'module' => 'reports', 'label' => 'Manage Reports', 'description' => 'Can manage HR reports'],
+            ['name' => 'view-reports', 'module' => 'reports', 'label' => 'View Reports', 'description' => 'Can view HR reports'],
             ['name' => 'manage-any-time-entries', 'module' => 'time_entries', 'label' => 'Manage All Time Entries', 'description' => 'Manage Any Time Entries'],
             ['name' => 'manage-own-time-entries', 'module' => 'time_entries', 'label' => 'Manage Own Time Entries', 'description' => 'Manage Limited Time Entries that is created by own'],
             ['name' => 'view-time-entries', 'module' => 'time_entries', 'label' => 'View Time Entries', 'description' => 'View Time Entries'],

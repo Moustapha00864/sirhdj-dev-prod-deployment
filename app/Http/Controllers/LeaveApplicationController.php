@@ -105,6 +105,13 @@ class LeaveApplicationController extends Controller
 
         $validated['created_by'] = creatorId();
 
+        // Check permissions: if not admin/manager, can only create for self
+        if (!Auth::user()->can('manage-leave-applications') && !Auth::user()->can('manage-any-leave-applications')) {
+            if ($validated['employee_id'] != Auth::id()) {
+                return redirect()->back()->with('error', __('You can only create leave applications for yourself.'));
+            }
+        }
+
         // Calculate total days
         $startDate = Carbon::parse($validated['start_date']);
         $endDate = Carbon::parse($validated['end_date']);
@@ -213,6 +220,12 @@ class LeaveApplicationController extends Controller
             ->first();
 
         if ($leaveApplication) {
+            // Check permissions: if not admin/manager, can only update own
+            if (!Auth::user()->can('manage-leave-applications') && !Auth::user()->can('manage-any-leave-applications')) {
+                if ($leaveApplication->employee_id != Auth::id()) {
+                    return redirect()->back()->with('error', __('You can only update your own leave applications.'));
+                }
+            }
             try {
                 $validated = $request->validate([
                     'employee_id' => 'required|exists:users,id',
@@ -263,6 +276,12 @@ class LeaveApplicationController extends Controller
             ->first();
 
         if ($leaveApplication) {
+            // Check permissions: if not admin/manager, can only delete own
+            if (!Auth::user()->can('manage-leave-applications') && !Auth::user()->can('manage-any-leave-applications')) {
+                if ($leaveApplication->employee_id != Auth::id()) {
+                    return redirect()->back()->with('error', __('You can only delete your own leave applications.'));
+                }
+            }
             try {
                 $leaveApplication->delete();
                 return redirect()->back()->with('success', __('Leave application deleted successfully'));

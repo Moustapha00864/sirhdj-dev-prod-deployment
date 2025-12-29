@@ -5,8 +5,7 @@ use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
-return new class extends Migration
-{
+return new class extends Migration {
     /**
      * Run the migrations.
      */
@@ -39,8 +38,9 @@ return new class extends Migration
                 $table->integer('commission_amount')->default(0);
             }
 
-            $table->integer('created_by')->default(0);
+            $table->integer('created_by')->nullable();
             $table->string('mode')->default('light');
+            $table->boolean('must_change_password')->default(false);
             $table->integer('is_enable_login')->default(1);
             $table->integer('google2fa_enable')->default(0);
             $table->text('google2fa_secret')->nullable();
