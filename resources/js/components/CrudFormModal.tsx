@@ -16,6 +16,7 @@ import { cn } from '@/lib/utils';
 import { useTranslation } from 'react-i18next';
 import MediaPicker from '@/components/MediaPicker';
 import DependentDropdown from '@/components/DependentDropdown';
+import { SearchableSelect } from '@/components/ui/searchable-select';
 
 interface CrudFormModalProps {
   isOpen: boolean;
@@ -376,6 +377,27 @@ export function CrudFormModal({
               )}
             </SelectContent>
           </Select>
+        );
+
+      case 'searchable-select':
+        const searchableOptions = field.relation
+          ? relationOptions[field.name] || []
+          : field.options || [];
+
+        const formattedOptions = searchableOptions.map((opt: any) => ({
+          value: String(field.relation ? opt[field.relation!.valueField] : opt.value),
+          label: String(field.relation ? opt[field.relation!.labelField] : opt.label),
+        }));
+
+        return (
+          <SearchableSelect
+            options={formattedOptions}
+            value={String(formData[field.name] || '')}
+            onChange={(value) => handleChange(field.name, value)}
+            placeholder={field.placeholder || `Select ${field.label}`}
+            error={!!errors[field.name]}
+            disabled={mode === 'view'}
+          />
         );
 
       case 'radio':

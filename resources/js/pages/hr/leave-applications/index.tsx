@@ -459,7 +459,7 @@ export default function LeaveApplications() {
             {
               name: 'employee_id',
               label: t('Employee'),
-              type: 'select',
+              type: 'searchable-select',
               required: true,
               options: employees ? employees.map((emp: any) => ({
                 value: emp.id.toString(),
