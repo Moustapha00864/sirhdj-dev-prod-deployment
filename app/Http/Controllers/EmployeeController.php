@@ -67,6 +67,41 @@ class EmployeeController extends Controller
             $query->where('status', $request->status);
         }
 
+        // Handle employment type filter (Statut)
+        if ($request->has('employment_type') && !empty($request->employment_type) && $request->employment_type !== 'all') {
+            $query->whereHas('employee', function ($q) use ($request) {
+                $q->where('employment_type', $request->employment_type);
+            });
+        }
+
+        // Handle personnel category filter
+        if ($request->has('personnel') && !empty($request->personnel) && $request->personnel !== 'all') {
+            $query->whereHas('employee', function ($q) use ($request) {
+                $q->where('personnel_category', $request->personnel);
+            });
+        }
+
+        // Handle gender filter
+        if ($request->has('gender') && !empty($request->gender) && $request->gender !== 'all') {
+            $query->whereHas('employee', function ($q) use ($request) {
+                $q->where('gender', $request->gender);
+            });
+        }
+
+        // Handle date_of_birth filter
+        if ($request->has('date_of_birth') && !empty($request->date_of_birth)) {
+            $query->whereHas('employee', function ($q) use ($request) {
+                $q->where('date_of_birth', $request->date_of_birth);
+            });
+        }
+
+        // Handle date_of_joining filter
+        if ($request->has('date_of_joining') && !empty($request->date_of_joining)) {
+            $query->whereHas('employee', function ($q) use ($request) {
+                $q->where('date_of_joining', $request->date_of_joining);
+            });
+        }
+
         // Handle sorting
         if ($request->has('sort_field') && !empty($request->sort_field)) {
             $query->orderBy($request->sort_field, $request->sort_direction ?? 'asc');
@@ -133,7 +168,7 @@ class EmployeeController extends Controller
             'planLimits' => $planLimits,
             'departments' => $departments,
             'designations' => $designations,
-            'filters' => $request->all(['search', 'department', 'branch', 'designation', 'status', 'sort_field', 'sort_direction', 'per_page']),
+            'filters' => $request->all(['search', 'department', 'branch', 'designation', 'status', 'employment_type', 'personnel', 'gender', 'date_of_birth', 'date_of_joining', 'sort_field', 'sort_direction', 'per_page']),
         ]);
     }
 
@@ -203,8 +238,10 @@ class EmployeeController extends Controller
                 'department_id' => 'required|exists:departments,id',
                 'designation_id' => 'required|exists:designations,id',
                 'date_of_joining' => 'required|date',
+                'birth_place' => 'nullable|string|max:255',
                 'employment_type' => 'required|string|max:50',
                 'employment_status' => 'required|string|max:50',
+                'personnel_category' => 'nullable|string|max:100',
 
                 // Contact information
                 'address_line_1' => 'required|string|max:255',
@@ -265,12 +302,14 @@ class EmployeeController extends Controller
             $employee->employee_id = $request->employee_id;
             $employee->phone = $request->phone;
             $employee->date_of_birth = $request->date_of_birth;
+            $employee->birth_place = $request->birth_place ?? null;
             $employee->gender = $request->gender;
             $employee->branch_id = $request->branch_id;
             $employee->department_id = $request->department_id;
             $employee->designation_id = $request->designation_id;
             $employee->date_of_joining = $request->date_of_joining;
             $employee->employment_type = $request->employment_type;
+            $employee->personnel_category = $request->personnel_category ?? null;
             $employee->address_line_1 = $request->address_line_1;
             $employee->address_line_2 = $request->address_line_2 ?? null;
             $employee->city = $request->city;
@@ -430,8 +469,10 @@ class EmployeeController extends Controller
                 'department_id' => 'required|exists:departments,id',
                 'designation_id' => 'required|exists:designations,id',
                 'date_of_joining' => 'required|date',
+                'birth_place' => 'nullable|string|max:255',
                 'employment_type' => 'required|string|max:50',
                 'employment_status' => 'required|string|max:50',
+                'personnel_category' => 'nullable|string|max:100',
 
                 // Contact information
                 'address_line_1' => 'required|string|max:255',
@@ -488,12 +529,14 @@ class EmployeeController extends Controller
             $employee->attendance_policy_id = $request->attendance_policy_id;
             $employee->phone = $request->phone;
             $employee->date_of_birth = $request->date_of_birth;
+            $employee->birth_place = $request->birth_place ?? null;
             $employee->gender = $request->gender;
             $employee->branch_id = $request->branch_id;
             $employee->department_id = $request->department_id;
             $employee->designation_id = $request->designation_id;
             $employee->date_of_joining = $request->date_of_joining;
             $employee->employment_type = $request->employment_type;
+            $employee->personnel_category = $request->personnel_category ?? null;
             $employee->address_line_1 = $request->address_line_1;
             $employee->address_line_2 = $request->address_line_2 ?? null;
             $employee->city = $request->city;

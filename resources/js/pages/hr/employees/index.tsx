@@ -14,15 +14,15 @@ import { useInitials } from '@/hooks/use-initials';
 import { useTranslation } from 'react-i18next';
 import { Pagination } from '@/components/ui/pagination';
 import { SearchAndFilterBar } from '@/components/ui/search-and-filter-bar';
-import {CrudFormModal} from '@/components/CrudFormModal';
+import { CrudFormModal } from '@/components/CrudFormModal';
 import { getImagePath } from '@/utils/helpers';
 
 export default function Employees() {
   const { t } = useTranslation();
-  const { auth, employees, branches, planLimits,departments, designations, filters: pageFilters = {} } = usePage().props as any;
+  const { auth, employees, branches, planLimits, departments, designations, filters: pageFilters = {} } = usePage().props as any;
   const permissions = auth?.permissions || [];
   const getInitials = useInitials();
-  
+
   // State
   const [activeView, setActiveView] = useState('list');
   const [searchTerm, setSearchTerm] = useState(pageFilters.search || '');
@@ -30,48 +30,63 @@ export default function Employees() {
   const [selectedBranch, setSelectedBranch] = useState(pageFilters.branch || 'all');
   const [selectedDesignation, setSelectedDesignation] = useState(pageFilters.designation || 'all');
   const [selectedStatus, setSelectedStatus] = useState(pageFilters.status || 'all');
+  const [selectedEmploymentType, setSelectedEmploymentType] = useState(pageFilters.employment_type || 'all');
+  const [selectedPersonnel, setSelectedPersonnel] = useState(pageFilters.personnel || 'all');
+  const [selectedGender, setSelectedGender] = useState(pageFilters.gender || 'all');
+  const [selectedDateOfBirth, setSelectedDateOfBirth] = useState(pageFilters.date_of_birth || '');
+  const [selectedDateOfJoining, setSelectedDateOfJoining] = useState(pageFilters.date_of_joining || '');
   const [showFilters, setShowFilters] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
   const [currentItem, setCurrentItem] = useState<any>(null);
-  
+
   // Check if any filters are active
   const hasActiveFilters = () => {
     return selectedDepartment !== 'all' || selectedBranch !== 'all' || selectedDesignation !== 'all' || selectedStatus !== 'all' || searchTerm !== '';
   };
-  
+
   // Count active filters
   const activeFilterCount = () => {
-    return (selectedDepartment !== 'all' ? 1 : 0) + 
-           (selectedBranch !== 'all' ? 1 : 0) + 
-           (selectedDesignation !== 'all' ? 1 : 0) + 
-           (selectedStatus !== 'all' ? 1 : 0) + 
-           (searchTerm ? 1 : 0);
+    return (selectedDepartment !== 'all' ? 1 : 0) +
+      (selectedBranch !== 'all' ? 1 : 0) +
+      (selectedDesignation !== 'all' ? 1 : 0) +
+      (selectedStatus !== 'all' ? 1 : 0) +
+      (selectedEmploymentType !== 'all' ? 1 : 0) +
+      (selectedPersonnel !== 'all' ? 1 : 0) +
+      (selectedGender !== 'all' ? 1 : 0) +
+      (selectedDateOfBirth ? 1 : 0) +
+      (selectedDateOfJoining ? 1 : 0) +
+      (searchTerm ? 1 : 0);
   };
-  
+
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     applyFilters();
   };
-  
+
   const applyFilters = () => {
-    router.get(route('hr.employees.index'), { 
+    router.get(route('hr.employees.index'), {
       page: 1,
       search: searchTerm || undefined,
       department: selectedDepartment !== 'all' ? selectedDepartment : undefined,
       branch: selectedBranch !== 'all' ? selectedBranch : undefined,
       designation: selectedDesignation !== 'all' ? selectedDesignation : undefined,
       status: selectedStatus !== 'all' ? selectedStatus : undefined,
+      employment_type: selectedEmploymentType !== 'all' ? selectedEmploymentType : undefined,
+      personnel: selectedPersonnel !== 'all' ? selectedPersonnel : undefined,
+      gender: selectedGender !== 'all' ? selectedGender : undefined,
+      date_of_birth: selectedDateOfBirth || undefined,
+      date_of_joining: selectedDateOfJoining || undefined,
       per_page: pageFilters.per_page
     }, { preserveState: true, preserveScroll: true });
   };
-  
+
   const handleSort = (field: string) => {
     const direction = pageFilters.sort_field === field && pageFilters.sort_direction === 'asc' ? 'desc' : 'asc';
-    
-    router.get(route('hr.employees.index'), { 
-      sort_field: field, 
-      sort_direction: direction, 
+
+    router.get(route('hr.employees.index'), {
+      sort_field: field,
+      sort_direction: direction,
       page: 1,
       search: searchTerm || undefined,
       department: selectedDepartment !== 'all' ? selectedDepartment : undefined,
@@ -81,10 +96,10 @@ export default function Employees() {
       per_page: pageFilters.per_page
     }, { preserveState: true, preserveScroll: true });
   };
-  
+
   const handleAction = (action: string, item: any) => {
     setCurrentItem(item);
-    
+
     switch (action) {
       case 'view':
         router.get(route('hr.employees.show', item.employee?.id || item.id));
@@ -103,16 +118,16 @@ export default function Employees() {
         break;
     }
   };
-  
+
   const handleAddNew = () => {
     router.get(route('hr.employees.create'));
   };
-  
+
   const handleDeleteConfirm = () => {
     toast.loading(t('Deleting employee...'));
-    
+
     router.delete(route('hr.employees.destroy', currentItem.id), {
-      onSuccess: (page) => {
+      onSuccess: (page: any) => {
         setIsDeleteModalOpen(false);
         toast.dismiss();
         if (page.props.flash.success) {
@@ -131,14 +146,14 @@ export default function Employees() {
       }
     });
   };
-  
+
   const handleToggleStatus = (employee: any) => {
     const currentStatus = employee.status || 'inactive';
     const newStatus = currentStatus === 'active' ? 'inactive' : 'active';
     toast.loading(`${newStatus === 'active' ? t('Activating') : t('Deactivating')} employee...`);
-    
+
     router.put(route('hr.employees.toggle-status', employee.employee?.id || employee.id), {}, {
-      onSuccess: (page) => {
+      onSuccess: (page: any) => {
         toast.dismiss();
         if (page.props.flash.success) {
           toast.success(t(page.props.flash.success));
@@ -159,9 +174,9 @@ export default function Employees() {
 
   const handlePasswordChange = (formData: any) => {
     toast.loading(t('Changing password...'));
-    
+
     router.put(route('hr.employees.change-password', currentItem.employee?.id || currentItem.id), formData, {
-      onSuccess: (page) => {
+      onSuccess: (page: any) => {
         setIsPasswordModalOpen(false);
         toast.dismiss();
         if (page.props.flash.success) {
@@ -180,15 +195,20 @@ export default function Employees() {
       }
     });
   };
-  
+
   const handleResetFilters = () => {
     setSearchTerm('');
     setSelectedDepartment('all');
     setSelectedBranch('all');
     setSelectedDesignation('all');
     setSelectedStatus('all');
+    setSelectedEmploymentType('all');
+    setSelectedPersonnel('all');
+    setSelectedGender('all');
+    setSelectedDateOfBirth('');
+    setSelectedDateOfJoining('');
     setShowFilters(false);
-    
+
     router.get(route('hr.employees.index'), {
       page: 1,
       per_page: pageFilters.per_page
@@ -196,8 +216,20 @@ export default function Employees() {
   };
 
   // Define page actions
-  const pageActions = [];
-  
+  const pageActions = [
+    {
+      label: t('View All Employees'),
+      icon: <Eye className="h-4 w-4 mr-2" />,
+      variant: 'outline',
+      onClick: () => {
+        router.get(route('hr.employees.index'), {
+          per_page: 1000,
+          page: 1
+        }, { preserveState: true, preserveScroll: true });
+      }
+    }
+  ];
+
   // Add the "Add New Employee" button if user has permission
   if (hasPermission(permissions, 'create-employees')) {
     const canCreate = !planLimits || planLimits.can_create;
@@ -218,9 +250,9 @@ export default function Employees() {
 
   // Define table columns
   const columns = [
-    { 
-      key: 'name', 
-      label: t('Name'), 
+    {
+      key: 'name',
+      label: t('Name'),
       sortable: true,
       render: (value: any, row: any) => {
         return (
@@ -240,47 +272,46 @@ export default function Employees() {
         );
       }
     },
-    { 
-      key: 'employee_id', 
+    {
+      key: 'employee_id',
       label: t('Employee ID'),
       sortable: true,
       render: (value: any, row: any) => {
         return row.employee?.employee_id || '-';
       }
     },
-    { 
-      key: 'department', 
+    {
+      key: 'department',
       label: t('Department'),
       render: (value: any, row: any) => {
         return row.employee?.department?.name || '-';
       }
     },
-    { 
-      key: 'designation', 
+    {
+      key: 'designation',
       label: t('Designation'),
       render: (value: any, row: any) => {
         return row.employee?.designation?.name || '-';
       }
     },
-    { 
-      key: 'status', 
+    {
+      key: 'status',
       label: t('Status'),
       render: (value: any, row: any) => {
         const status = row.status || 'inactive';
         return (
-          <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ${
-            status === 'active' 
-              ? 'bg-green-50 text-green-700 ring-1 ring-inset ring-green-600/20' 
+          <span className={`inline-flex items-center rounded-md px-2 py-1 text-xs font-medium ${status === 'active'
+              ? 'bg-green-50 text-green-700 ring-1 ring-inset ring-green-600/20'
               : 'bg-red-50 text-red-700 ring-1 ring-inset ring-red-600/20'
-          }`}>
+            }`}>
             {status === 'active' ? t('Active') : t('Inactive')}
           </span>
         );
       }
     },
-    { 
-      key: 'date_of_joining', 
-      label: t('Joined'), 
+    {
+      key: 'date_of_joining',
+      label: t('Joined'),
       sortable: true,
       render: (value: any, row: any) => {
         const joinDate = row.employee?.date_of_joining;
@@ -291,38 +322,38 @@ export default function Employees() {
 
   // Define table actions
   const actions = [
-    { 
-      label: t('View'), 
-      icon: 'Eye', 
-      action: 'view', 
+    {
+      label: t('View'),
+      icon: 'Eye',
+      action: 'view',
       className: 'text-blue-500',
       requiredPermission: 'view-employees'
     },
-    { 
-      label: t('Edit'), 
-      icon: 'Edit', 
-      action: 'edit', 
+    {
+      label: t('Edit'),
+      icon: 'Edit',
+      action: 'edit',
       className: 'text-amber-500',
       requiredPermission: 'edit-employees'
     },
-    { 
-      label: t('Change Password'), 
-      icon: 'Key', 
-      action: 'change-password', 
+    {
+      label: t('Change Password'),
+      icon: 'Key',
+      action: 'change-password',
       className: 'text-green-500',
       requiredPermission: 'edit-employees'
     },
-    { 
-      label: t('Toggle Status'), 
-      icon: 'Lock', 
-      action: 'toggle-status', 
+    {
+      label: t('Toggle Status'),
+      icon: 'Lock',
+      action: 'toggle-status',
       className: 'text-amber-500',
       requiredPermission: 'edit-employees'
     },
-    { 
-      label: t('Delete'), 
-      icon: 'Trash2', 
-      action: 'delete', 
+    {
+      label: t('Delete'),
+      icon: 'Trash2',
+      action: 'delete',
       className: 'text-red-500',
       requiredPermission: 'delete-employees'
     }
@@ -349,7 +380,7 @@ export default function Employees() {
     { value: 'all', label: t('All Designations') },
     ...(designations || []).map((designation: any) => ({
       value: designation.id.toString(),
-      label: `${designation.name} (${designation.department?.name || t('No Department')})`
+      label: designation.name
     }))
   ];
 
@@ -362,8 +393,8 @@ export default function Employees() {
   ];
 
   return (
-    <PageTemplate 
-      title={t("Employee Management")} 
+    <PageTemplate
+      title={t("Employee Management")}
       url="/hr/employees"
       actions={pageActions}
       breadcrumbs={breadcrumbs}
@@ -407,6 +438,60 @@ export default function Employees() {
               value: selectedStatus,
               onChange: setSelectedStatus,
               options: statusOptions
+            },
+            {
+              name: 'employment_type',
+              label: t('Statut (Contrat)'),
+              type: 'select',
+              value: selectedEmploymentType,
+              onChange: setSelectedEmploymentType,
+              options: [
+                { value: 'all', label: t('All Statuses') },
+                { value: 'Universitaire', label: t('Universitaire') },
+                { value: 'Collectivité Locale', label: t('Collectivité Locale') },
+                { value: 'CDD du MSHP', label: t('CDD du MSHP') }
+              ]
+            },
+            {
+              name: 'personnel',
+              label: t('Personnel'),
+              type: 'select',
+              value: selectedPersonnel,
+              onChange: setSelectedPersonnel,
+              options: [
+                { value: 'all', label: t('All Personnel') },
+                { value: 'Administration', label: t('Administration') },
+                { value: 'Paramédical', label: t('Paramédical') },
+                { value: 'Médical', label: t('Médical') },
+                { value: 'Technique et Soutien', label: t('Technique et Soutien') }
+              ]
+            },
+            {
+              name: 'gender',
+              label: t('Genre'),
+              type: 'select',
+              value: selectedGender,
+              onChange: setSelectedGender,
+              options: [
+                { value: 'all', label: t('All Genders') },
+                { value: 'male', label: t('Male') },
+                { value: 'female', label: t('Female') },
+                { value: 'other', label: t('Other') }
+              ]
+            },
+            {
+              name: 'date_of_birth',
+              label: t('Date de naissance'),
+              type: 'date',
+              value: selectedDateOfBirth,
+              onChange: setSelectedDateOfBirth
+            },
+            {
+              name: 'date_of_joining',
+              label: t('Date d’entrée'),
+              type: 'date',
+              value: selectedDateOfJoining,
+              onChange: setSelectedDateOfJoining
             }
           ]}
           showFilters={showFilters}
@@ -417,8 +502,8 @@ export default function Employees() {
           onApplyFilters={applyFilters}
           currentPerPage={pageFilters.per_page?.toString() || "10"}
           onPerPageChange={(value) => {
-            router.get(route('hr.employees.index'), { 
-              page: 1, 
+            router.get(route('hr.employees.index'), {
+              page: 1,
               per_page: parseInt(value),
               search: searchTerm || undefined,
               department: selectedDepartment !== 'all' ? selectedDepartment : undefined,
@@ -486,16 +571,15 @@ export default function Employees() {
                         <p className="text-sm text-gray-600 dark:text-gray-300 mb-1">{employee.email}</p>
                         <p className="text-sm text-gray-600 dark:text-gray-300 mb-2">{employee.employee?.employee_id || '-'}</p>
                         <div className="flex items-center">
-                          <div className={`h-2 w-2 rounded-full mr-2 ${
-                            employee.status === 'active' ? 'bg-green-500' : 'bg-gray-400'
-                          }`}></div>
+                          <div className={`h-2 w-2 rounded-full mr-2 ${employee.status === 'active' ? 'bg-green-500' : 'bg-gray-400'
+                            }`}></div>
                           <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
                             {employee.status === 'active' ? t('Active') : t('Inactive')}
                           </span>
                         </div>
                       </div>
                     </div>
-                    
+
                     {/* Actions dropdown */}
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
@@ -518,8 +602,8 @@ export default function Employees() {
                         )}
                         {hasPermission(permissions, 'edit-employees') && (
                           <DropdownMenuItem onClick={() => handleAction('toggle-status', employee)}>
-                            {employee.status === 'active' ? 
-                              <Lock className="h-4 w-4 mr-2" /> : 
+                            {employee.status === 'active' ?
+                              <Lock className="h-4 w-4 mr-2" /> :
                               <Unlock className="h-4 w-4 mr-2" />
                             }
                             <span>{employee.status === 'active' ? t("Deactivate") : t("Activate")}</span>
@@ -541,7 +625,7 @@ export default function Employees() {
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </div>
-                  
+
                   {/* Department & Designation info */}
                   <div className="border border-gray-200 dark:border-gray-700 rounded-md p-3 mb-4">
                     <div className="text-sm mb-1">
@@ -551,17 +635,17 @@ export default function Employees() {
                       <span className="font-medium">{t("Designation")}:</span> {employee.employee?.designation?.name || '-'}
                     </div>
                   </div>
-                
+
                   {/* Joined date */}
                   <div className="text-xs text-gray-500 dark:text-gray-400 mb-4">
                     {t("Joined:")} {employee.employee?.date_of_joining ? (window.appSettings?.formatDateTime(employee.employee.date_of_joining, false) || new Date(employee.employee.date_of_joining).toLocaleDateString()) : '-'}
                   </div>
-                
+
                   {/* Action buttons */}
                   <div className="flex gap-2">
                     {hasPermission(permissions, 'edit-employees') && (
-                      <Button 
-                        variant="outline" 
+                      <Button
+                        variant="outline"
                         size="sm"
                         onClick={() => handleAction('edit', employee)}
                         className="flex-1 h-9 text-sm border-gray-300 dark:border-gray-600 dark:text-gray-200"
@@ -570,10 +654,10 @@ export default function Employees() {
                         {t("Edit")}
                       </Button>
                     )}
-                    
+
                     {hasPermission(permissions, 'view-employees') && (
-                      <Button 
-                        variant="outline" 
+                      <Button
+                        variant="outline"
                         size="sm"
                         onClick={() => handleAction('view', employee)}
                         className="flex-1 h-9 text-sm border-gray-300 dark:border-gray-600 dark:text-gray-200"
@@ -582,10 +666,10 @@ export default function Employees() {
                         {t("View")}
                       </Button>
                     )}
-                    
+
                     {hasPermission(permissions, 'delete-employees') && (
-                      <Button 
-                        variant="outline" 
+                      <Button
+                        variant="outline"
                         size="sm"
                         onClick={() => handleAction('delete', employee)}
                         className="flex-1 h-9 text-sm text-gray-700 border-gray-300 dark:border-gray-600 dark:text-gray-200"
@@ -599,7 +683,7 @@ export default function Employees() {
               </Card>
             ))}
           </div>
-          
+
           {/* Pagination for grid view */}
           <div className="mt-6 bg-white dark:bg-gray-900 rounded-lg shadow overflow-hidden">
             <Pagination
@@ -630,17 +714,17 @@ export default function Employees() {
         onSubmit={handlePasswordChange}
         formConfig={{
           fields: [
-            { 
-              name: 'password', 
-              label: t('New Password'), 
-              type: 'password', 
-              required: true 
+            {
+              name: 'password',
+              label: t('New Password'),
+              type: 'password',
+              required: true
             },
-            { 
-              name: 'password_confirmation', 
-              label: t('Confirm Password'), 
-              type: 'password', 
-              required: true 
+            {
+              name: 'password_confirmation',
+              label: t('Confirm Password'),
+              type: 'password',
+              required: true
             }
           ],
           modalSize: 'md'

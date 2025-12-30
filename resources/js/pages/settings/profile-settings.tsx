@@ -16,6 +16,14 @@ import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 // import DeleteUser from '@/components/delete-user';
 import { useTranslation } from 'react-i18next';
 import { Camera } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 
 const sidebarNavItems: NavItem[] = [
@@ -35,14 +43,22 @@ export default function ProfileSettings({ mustVerifyEmail, status }: { mustVerif
   const { t } = useTranslation();
   const { auth } = usePage<SharedData>().props;
   const [activeSection, setActiveSection] = useState('profile');
-  
+
   // Refs for each section
   const profileRef = useRef<HTMLDivElement>(null);
   const passwordRef = useRef<HTMLDivElement>(null);
-  
+
   // Password form refs
   const passwordInput = useRef<HTMLInputElement>(null);
   const currentPasswordInput = useRef<HTMLInputElement>(null);
+
+  const [showPasswordAlert, setShowPasswordAlert] = useState(false);
+
+  useEffect(() => {
+    if (auth.user?.must_change_password) {
+      setShowPasswordAlert(true);
+    }
+  }, [auth.user?.must_change_password]);
 
   // Profile form
   const { data: profileData, setData: setProfileData, post: profilePost, errors: profileErrors, processing: profileProcessing, recentlySuccessful: profileRecentlySuccessful } = useForm({
@@ -119,11 +135,11 @@ export default function ProfileSettings({ mustVerifyEmail, status }: { mustVerif
   useEffect(() => {
     const handleScroll = () => {
       const scrollPosition = window.scrollY + 100; // Add offset for better UX
-      
+
       // Get positions of each section
       const profilePosition = profileRef.current?.offsetTop || 0;
       const passwordPosition = passwordRef.current?.offsetTop || 0;
-      
+
       // Determine active section based on scroll position
       if (scrollPosition >= passwordPosition) {
         setActiveSection('password');
@@ -131,10 +147,10 @@ export default function ProfileSettings({ mustVerifyEmail, status }: { mustVerif
         setActiveSection('profile');
       }
     };
-    
+
     // Add scroll event listener
     window.addEventListener('scroll', handleScroll);
-    
+
     // Initial check for hash in URL
     const hash = window.location.hash.replace('#', '');
     if (hash) {
@@ -144,7 +160,7 @@ export default function ProfileSettings({ mustVerifyEmail, status }: { mustVerif
         setActiveSection(hash);
       }
     }
-    
+
     return () => {
       window.removeEventListener('scroll', handleScroll);
     };
@@ -161,8 +177,8 @@ export default function ProfileSettings({ mustVerifyEmail, status }: { mustVerif
   };
 
   return (
-    <PageTemplate 
-      title={t("Profile Settings")} 
+    <PageTemplate
+      title={t("Profile Settings")}
       url="/profile"
     >
       <div className="flex flex-col space-y-8">
@@ -197,8 +213,8 @@ export default function ProfileSettings({ mustVerifyEmail, status }: { mustVerif
                   {/* Avatar Upload Section */}
                   <div className="flex items-center space-x-6">
                     <Avatar className="h-20 w-20">
-                      <AvatarImage 
-                        src={getAvatarUrl()} 
+                      <AvatarImage
+                        src={getAvatarUrl()}
                         alt={auth?.user?.name || 'Avatar'}
                       />
                       <AvatarFallback className="text-lg">
@@ -365,6 +381,32 @@ export default function ProfileSettings({ mustVerifyEmail, status }: { mustVerif
           </section>
         </div>
       </div>
-    </PageTemplate>
+
+      <Dialog open={showPasswordAlert} onOpenChange={setShowPasswordAlert}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t("Change Password Required")}</DialogTitle>
+            <DialogDescription>
+              {t("For security reasons, you are required to change your password before proceeding.")}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button onClick={() => {
+              setShowPasswordAlert(false);
+              const passwordSection = document.getElementById('password');
+              if (passwordSection) {
+                passwordSection.scrollIntoView({ behavior: 'smooth' });
+                setActiveSection('password');
+              }
+              setTimeout(() => {
+                passwordInput.current?.focus();
+              }, 500);
+            }}>
+              {t("Change Password Now")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </PageTemplate >
   );
 }
