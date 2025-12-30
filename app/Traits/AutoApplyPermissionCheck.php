@@ -41,7 +41,7 @@ trait AutoApplyPermissionCheck
         }
 
         // For company users, show their records and their employees' records
-        if ($user->hasRole(['company'])) {
+        if ($user->hasRole(['company', 'Director', 'HR Generalist'])) {
             if (Schema::hasColumn($query->getModel()->getTable(), 'created_by')) {
                 return $query->whereIn('created_by', getCompanyAndUsersId());
             }
@@ -74,23 +74,30 @@ trait AutoApplyPermissionCheck
             }
         }
 
-        // Custom Logic for Leave Approval Workflow: Managers only see their department
-        // We do this BEFORE employee check because managers usually also have 'employee' role
+        // Custom Logic for Leave Approval Workflow
         if (get_class($query->getModel()) === 'App\Models\LeaveApplication') {
 
-            // Explicitly allow HR and Director to see everything (Company Scoped)
-            // This acts as a failsafe in case they miss the 'manage-any-leave-applications' permission
-            if ($user->hasRole(['HR Generalist', 'Director'])) {
-                if (Schema::hasColumn($query->getModel()->getTable(), 'created_by')) {
-                    return $query->whereIn('created_by', getCompanyAndUsersId());
+            // Director and HR Generalist: View ALL applications in the company
+            if ($user->hasRole(['Director', 'HR Generalist', 'company'])) {
+                $companyId = $user->created_by;
+                if ($user->type === 'company') {
+                    $companyId = $user->id;
                 }
-                return $query;
+
+                // Find all employees belonging to this company (recursively 2 levels)
+                return $query->whereHas('employee', function ($q) use ($companyId) {
+                    $q->where('created_by', $companyId)
+                        ->orWhereIn('created_by', function ($sub) use ($companyId) {
+                            $sub->select('id')->from('users')->where('created_by', $companyId);
+                        });
+                });
             }
 
+            // Department Manager: View only own department requests + own requests
             if ($user->hasRole('Department Manager')) {
                 return $query->where(function ($q) use ($user) {
                     // See requests from employees in their department (where they are manager or validator2)
-                    $q->whereHas('employee.department', function ($subQ) use ($user) {
+                    $q->whereHas('employee.employee.department', function ($subQ) use ($user) {
                         $subQ->where('manager_id', $user->id)
                             ->orWhere('validator2_id', $user->id);
                     })

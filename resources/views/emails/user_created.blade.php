@@ -41,6 +41,13 @@
 
         <p>Un compte utilisateur a été créé pour vous sur la plateforme Medistaff.</p>
 
+        <p><strong>Détails du compte :</strong></p>
+        <ul>
+            <li><strong>Nom :</strong> {{ $user->name }}</li>
+            <li><strong>Email :</strong> {{ $user->email }}</li>
+            <li><strong>Rôle :</strong> {{ ucfirst($user->type) }}</li>
+        </ul>
+
         <p>Veuillez cliquer sur le bouton ci-dessous pour configurer votre mot de passe et accéder à votre compte :</p>
 
         <a href="{{ $resetLink }}" class="button">Configurer mon mot de passe</a>

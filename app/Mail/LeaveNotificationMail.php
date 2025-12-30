@@ -73,6 +73,8 @@ class LeaveNotificationMail extends Mailable
                 'recipient' => $this->recipient,
                 'employee' => $this->employee,
                 'manager' => $this->manager,
+                'director' => $this->recipient, // Alias for director templates
+                'hr' => $this->recipient,       // Alias for HR templates
                 'comments' => $this->comments,
                 'approver' => $this->approver,
             ]

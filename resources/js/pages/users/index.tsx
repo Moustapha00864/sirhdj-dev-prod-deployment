@@ -157,6 +157,17 @@ export default function Users() {
       formData.roles = formData.roles[0];
     }
 
+    // Auto-set approval level based on role
+    const roleId = formData.roles;
+    const selectedRole = roles?.find((r: any) => r.id.toString() === roleId?.toString());
+    const roleName = selectedRole?.name?.toLowerCase();
+
+    if (roleName?.includes('hr')) {
+      formData.approval_level = 3;
+    } else if (roleName?.includes('director')) {
+      formData.approval_level = 4;
+    }
+
     if (formMode === 'create') {
       toast.loading(t('Creating user...'));
 
@@ -654,7 +665,10 @@ export default function Users() {
               label: t('Role'),
               type: 'select',
               options: roles ? roles
-                .filter((role: any) => role.name.toLowerCase() !== 'employee')
+                .filter((role: any) => {
+                  const rName = role.name.toLowerCase();
+                  return !['employee', 'superadmin', 'company', 'department manager'].includes(rName);
+                })
                 .map((role: any) => ({
                   value: role.id.toString(),
                   label: role.label || role.name
@@ -667,8 +681,7 @@ export default function Users() {
               type: 'select',
               options: [
                 { value: '1', label: t('Level 1 (Manager)') },
-                { value: '2', label: t('Level 2 (Validator)') },
-                { value: '4', label: t('Level 4 (Director)') }
+                { value: '2', label: t('Level 2 (Validator)') }
               ],
               required: true,
               conditional: (mode, formData) => {
@@ -676,9 +689,9 @@ export default function Users() {
                 const roleId = Array.isArray(formData.roles) ? formData.roles[0] : formData.roles;
                 const selectedRole = roles?.find((r: any) => r.id.toString() === roleId.toString());
                 const roleName = selectedRole?.name?.toLowerCase();
-                // Hide for HR as per requirement
-                if (roleName?.includes('hr')) return false;
-                return roleName === 'manager' || roleName === 'department manager';
+
+                // Only show for Manager roles
+                return roleName === 'manager';
               }
             },
             {
@@ -695,9 +708,9 @@ export default function Users() {
                 const roleId = Array.isArray(formData.roles) ? formData.roles[0] : formData.roles;
                 const selectedRole = roles?.find((r: any) => r.id.toString() === roleId.toString());
                 const roleName = selectedRole?.name?.toLowerCase();
-                // Hide for HR as per requirement
-                if (roleName?.includes('hr')) return false;
-                return roleName === 'manager' || roleName === 'department manager';
+
+                // Only show for Manager roles (Directors and HR are global)
+                return roleName === 'manager';
               }
             }
           ],

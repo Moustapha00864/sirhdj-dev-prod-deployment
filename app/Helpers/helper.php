@@ -31,7 +31,7 @@ if (!function_exists('getCacheSize')) {
     }
 }
 
-if (! function_exists('settings')) {
+if (!function_exists('settings')) {
     function settings($user_id = null)
     {
         // Skip database queries during installation
@@ -88,7 +88,7 @@ if (! function_exists('settings')) {
     }
 }
 
-if (! function_exists('formatDateTime')) {
+if (!function_exists('formatDateTime')) {
     function formatDateTime($date, $includeTime = true)
     {
         if (!$date) {
@@ -107,7 +107,7 @@ if (! function_exists('formatDateTime')) {
     }
 }
 
-if (! function_exists('getSetting')) {
+if (!function_exists('getSetting')) {
     function getSetting($key, $default = null, $user_id = null)
     {
         $settings = settings($user_id);
@@ -122,7 +122,7 @@ if (! function_exists('getSetting')) {
     }
 }
 
-if (! function_exists('updateSetting')) {
+if (!function_exists('updateSetting')) {
     function updateSetting($key, $value, $user_id = null)
     {
         if (is_null($user_id)) {
@@ -162,14 +162,14 @@ if (! function_exists('updateSetting')) {
     }
 }
 
-if (! function_exists('isLandingPageEnabled')) {
+if (!function_exists('isLandingPageEnabled')) {
     function isLandingPageEnabled()
     {
         return getSetting('landingPageEnabled', true) === true || getSetting('landingPageEnabled', true) === '1';
     }
 }
 
-if (! function_exists('defaultRoleAndSetting')) {
+if (!function_exists('defaultRoleAndSetting')) {
     function defaultRoleAndSetting($user)
     {
         $companyRole = Role::where('name', 'company')->first();
@@ -189,7 +189,7 @@ if (! function_exists('defaultRoleAndSetting')) {
     }
 }
 
-if (! function_exists('getPaymentSettings')) {
+if (!function_exists('getPaymentSettings')) {
     /**
      * Get payment settings for a user
      *
@@ -211,7 +211,7 @@ if (! function_exists('getPaymentSettings')) {
     }
 }
 
-if (! function_exists('updatePaymentSetting')) {
+if (!function_exists('updatePaymentSetting')) {
     /**
      * Update or create a payment setting
      *
@@ -230,7 +230,7 @@ if (! function_exists('updatePaymentSetting')) {
     }
 }
 
-if (! function_exists('isPaymentMethodEnabled')) {
+if (!function_exists('isPaymentMethodEnabled')) {
     /**
      * Check if a payment method is enabled
      *
@@ -247,7 +247,7 @@ if (! function_exists('isPaymentMethodEnabled')) {
     }
 }
 
-if (! function_exists('getPaymentMethodConfig')) {
+if (!function_exists('getPaymentMethodConfig')) {
     /**
      * Get configuration for a specific payment method
      *
@@ -473,7 +473,7 @@ if (! function_exists('getPaymentMethodConfig')) {
     }
 }
 
-if (! function_exists('getEnabledPaymentMethods')) {
+if (!function_exists('getEnabledPaymentMethods')) {
     /**
      * Get all enabled payment methods
      *
@@ -495,7 +495,7 @@ if (! function_exists('getEnabledPaymentMethods')) {
     }
 }
 
-if (! function_exists('validatePaymentMethodConfig')) {
+if (!function_exists('validatePaymentMethodConfig')) {
     /**
      * Validate payment method configuration
      *
@@ -774,7 +774,7 @@ if (! function_exists('validatePaymentMethodConfig')) {
     }
 }
 
-if (! function_exists('calculatePlanPricing')) {
+if (!function_exists('calculatePlanPricing')) {
     function calculatePlanPricing($plan, $couponCode = null, $billingCycle = 'monthly')
     {
         // $originalPrice = $plan->price;
@@ -808,7 +808,7 @@ if (! function_exists('calculatePlanPricing')) {
     }
 }
 
-if (! function_exists('createPlanOrder')) {
+if (!function_exists('createPlanOrder')) {
     function createPlanOrder($data)
     {
         $plan = Plan::findOrFail($data['plan_id']);
@@ -832,7 +832,7 @@ if (! function_exists('createPlanOrder')) {
     }
 }
 
-if (! function_exists('assignPlanToUser')) {
+if (!function_exists('assignPlanToUser')) {
     function assignPlanToUser($user, $plan, $billingCycle)
     {
         $expiresAt = $billingCycle === 'yearly' ? now()->addYear() : now()->addMonth();
@@ -849,7 +849,7 @@ if (! function_exists('assignPlanToUser')) {
     }
 }
 
-if (! function_exists('processPaymentSuccess')) {
+if (!function_exists('processPaymentSuccess')) {
     function processPaymentSuccess($data)
     {
         $plan = Plan::findOrFail($data['plan_id']);
@@ -868,7 +868,7 @@ if (! function_exists('processPaymentSuccess')) {
     }
 }
 
-if (! function_exists('getPaymentGatewaySettings')) {
+if (!function_exists('getPaymentGatewaySettings')) {
     function getPaymentGatewaySettings()
     {
         $superAdminId = User::where('type', 'superadmin')->first()?->id;
@@ -881,7 +881,7 @@ if (! function_exists('getPaymentGatewaySettings')) {
     }
 }
 
-if (! function_exists('validatePaymentRequest')) {
+if (!function_exists('validatePaymentRequest')) {
     function validatePaymentRequest($request, $additionalRules = [])
     {
         $baseRules = [
@@ -894,14 +894,14 @@ if (! function_exists('validatePaymentRequest')) {
     }
 }
 
-if (! function_exists('handlePaymentError')) {
+if (!function_exists('handlePaymentError')) {
     function handlePaymentError($e, $method = 'payment')
     {
         return back()->withErrors(['error' => __('Payment processing failed: :message', ['message' => $e->getMessage()])]);
     }
 }
 
-if (! function_exists('defaultSettings')) {
+if (!function_exists('defaultSettings')) {
     /**
      * Get default settings for System, Brand, Storage, and Currency configurations
      *
@@ -909,7 +909,7 @@ if (! function_exists('defaultSettings')) {
      */
     function defaultSettings()
     {
-        $settings =  [
+        $settings = [
             // System Settings
             'defaultLanguage' => 'en',
             'dateFormat' => 'Y-m-d',
@@ -976,7 +976,7 @@ if (! function_exists('defaultSettings')) {
     }
 }
 
-if (! function_exists('createDefaultSettings')) {
+if (!function_exists('createDefaultSettings')) {
     /**
      * Create default settings for a user
      *
@@ -992,7 +992,7 @@ if (! function_exists('createDefaultSettings')) {
             $settingsData[] = [
                 'user_id' => $userId,
                 'key' => $key,
-                'value' => is_bool($value) ? ($value ? '1' : '0') : (string)$value,
+                'value' => is_bool($value) ? ($value ? '1' : '0') : (string) $value,
                 'created_at' => now(),
                 'updated_at' => now(),
             ];
@@ -1002,7 +1002,7 @@ if (! function_exists('createDefaultSettings')) {
     }
 }
 
-if (! function_exists('copySettingsFromSuperAdmin')) {
+if (!function_exists('copySettingsFromSuperAdmin')) {
     /**
      * Copy system and brand settings from superadmin to company user
      *
@@ -1072,7 +1072,7 @@ if (! function_exists('copySettingsFromSuperAdmin')) {
     }
 }
 
-if (! function_exists('createdBy')) {
+if (!function_exists('createdBy')) {
     function createdBy()
     {
         if (Auth::user()->type == 'superadmin') {
@@ -1080,13 +1080,13 @@ if (! function_exists('createdBy')) {
         } else if (Auth::user()->type == 'company') {
             return Auth::user()->id;
         } else {
-            return  Auth::user()->created_by;
+            return Auth::user()->created_by;
         }
     }
 }
 
 
-if (! function_exists('creatorId')) {
+if (!function_exists('creatorId')) {
     function creatorId()
     {
         return Auth::user()->id;
@@ -1094,20 +1094,37 @@ if (! function_exists('creatorId')) {
 }
 
 
-if (! function_exists('getCompanyAndUsersId')) {
+if (!function_exists('getCompanyAndUsersId')) {
     function getCompanyAndUsersId()
     {
         $user = Auth::user();
+        $companyId = null;
+
         if ($user->hasRole(['company'])) {
-            $companyUserIds = User::where('created_by', $user->id)->pluck('id')->toArray();
-            $companyUserIds[] = $user->id;
-            return $companyUserIds;
+            $companyId = $user->id;
         } else {
-            $userCreatedBy = User::where('id', Auth::user()->created_by)->value('id');
-            $companyUserIds = User::where('created_by', $userCreatedBy)->pluck('id')->toArray();
-            $companyUserIds[] = $userCreatedBy;
-            return $companyUserIds;
+            $companyId = $user->created_by;
+
+            // Attempt to resolve top-level company if current creator is not 'company' type
+            // This handles case where Director is created by Company (Depth 1), 
+            // but also if we are checking from a lower level perspective if needed.
+            // For Director/HR who are created by Company, created_by IS the company.
+            $creator = User::find($companyId);
+            if ($creator && !$creator->hasRole('company') && $creator->created_by) {
+                $companyId = $creator->created_by;
+            }
         }
+
+        // Level 1: Users created by Company direct (e.g. Directors, Managers, some Employees)
+        $level1Ids = User::where('created_by', $companyId)->pluck('id')->toArray();
+
+        // Level 2: Users created by Level 1 users (e.g. Employees created by Managers)
+        $level2Ids = [];
+        if (!empty($level1Ids)) {
+            $level2Ids = User::whereIn('created_by', $level1Ids)->pluck('id')->toArray();
+        }
+
+        return array_unique(array_merge([$companyId], $level1Ids, $level2Ids));
     }
 }
 

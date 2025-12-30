@@ -141,7 +141,7 @@ class UserController extends BaseController
             'password' => Hash::make($request->password),
             'created_by' => creatorId(),
             'lang' => $userLang,
-            'must_change_password' => true,
+            'must_change_password' => false,
         ]);
 
         if ($user && $request->roles) {
