@@ -979,6 +979,8 @@ Route::middleware(['auth', 'verified', 'setting'])->group(function () {
             Route::put('hr/leave-applications/{leaveApplication}', [\App\Http\Controllers\LeaveApplicationController::class, 'update'])->middleware('permission:edit-leave-applications')->name('hr.leave-applications.update');
             Route::delete('hr/leave-applications/{leaveApplication}', [\App\Http\Controllers\LeaveApplicationController::class, 'destroy'])->middleware('permission:delete-leave-applications')->name('hr.leave-applications.destroy');
             Route::put('hr/leave-applications/{leaveApplication}/status', [\App\Http\Controllers\LeaveApplicationController::class, 'updateStatus'])->middleware('permission:approve-leave-applications')->name('hr.leave-applications.update-status');
+            Route::post('hr/leave-applications/bulk-approve', [\App\Http\Controllers\LeaveApplicationController::class, 'bulkApprove'])->middleware('permission:approve-leave-applications')->name('hr.leave-applications.bulk-approve');
+            Route::post('hr/leave-applications/bulk-reject', [\App\Http\Controllers\LeaveApplicationController::class, 'bulkReject'])->middleware('permission:approve-leave-applications')->name('hr.leave-applications.bulk-reject');
             Route::get('hr/leave-applications/{leave}/download-summary', [\App\Http\Controllers\LeaveApplicationController::class, 'downloadSummary'])->name('hr.leave-applications.download-summary');
         });
 

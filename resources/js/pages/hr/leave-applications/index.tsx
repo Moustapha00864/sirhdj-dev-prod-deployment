@@ -14,6 +14,9 @@ import { Pagination } from '@/components/ui/pagination';
 import { SearchAndFilterBar } from '@/components/ui/search-and-filter-bar';
 import ApprovalTracker from '@/components/Leave/ApprovalTracker';
 import ApprovalModal from '@/components/Leave/ApprovalModal';
+import BulkApprovalModal from '@/components/Leave/BulkApprovalModal';
+import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 
 export default function LeaveApplications() {
   const { t } = useTranslation();
@@ -32,6 +35,8 @@ export default function LeaveApplications() {
   const [currentItem, setCurrentItem] = useState<any>(null);
   const [formMode, setFormMode] = useState<'create' | 'edit' | 'view'>('create');
   const [isApprovalModalOpen, setIsApprovalModalOpen] = useState(false);
+  const [selectedLeaveIds, setSelectedLeaveIds] = useState<number[]>([]);
+  const [isBulkApprovalModalOpen, setIsBulkApprovalModalOpen] = useState(false);
 
   // Check if any filters are active
   const hasActiveFilters = () => {
@@ -214,6 +219,33 @@ export default function LeaveApplications() {
     }, { preserveState: true, preserveScroll: true });
   };
 
+  // Bulk selection handlers
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      const allIds = (leaveApplications?.data || []).map((leave: any) => leave.id);
+      setSelectedLeaveIds(allIds);
+    } else {
+      setSelectedLeaveIds([]);
+    }
+  };
+
+  const handleSelectOne = (id: number, checked: boolean) => {
+    if (checked) {
+      setSelectedLeaveIds([...selectedLeaveIds, id]);
+    } else {
+      setSelectedLeaveIds(selectedLeaveIds.filter(selectedId => selectedId !== id));
+    }
+  };
+
+  const handleBulkApproval = () => {
+    setIsBulkApprovalModalOpen(true);
+  };
+
+  const handleBulkSuccess = () => {
+    setSelectedLeaveIds([]);
+    setIsBulkApprovalModalOpen(false);
+  };
+
   // Define page actions
   const pageActions = [];
 
@@ -235,6 +267,22 @@ export default function LeaveApplications() {
 
   // Define table columns
   const columns = [
+    {
+      key: 'select',
+      label: '',
+      render: (value: any, row: any) => {
+        const isChecked = selectedLeaveIds.includes(row.id);
+        return (
+          <div className="flex items-center justify-center">
+            <Checkbox
+              checked={isChecked}
+              onCheckedChange={(checked) => handleSelectOne(row.id, checked as boolean)}
+              aria-label={`Select leave application ${row.id}`}
+            />
+          </div>
+        );
+      }
+    },
     {
       key: 'employee',
       label: t('Employee'),
@@ -367,6 +415,36 @@ export default function LeaveApplications() {
       breadcrumbs={breadcrumbs}
       noPadding
     >
+      {/* Bulk action buttons */}
+      {selectedLeaveIds.length > 0 && hasPermission(permissions, 'approve-leave-applications') && (
+        <div className="bg-blue-50 dark:bg-blue-900 border border-blue-200 dark:border-blue-800 rounded-lg p-4 mb-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="text-sm font-medium text-blue-900 dark:text-blue-100">
+                {t(':count item(s) selected', { count: selectedLeaveIds.length })}
+              </span>
+            </div>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setSelectedLeaveIds([])}
+                size="sm"
+              >
+                {t('Clear Selection')}
+              </Button>
+              <Button
+                variant="default"
+                onClick={handleBulkApproval}
+                size="sm"
+                className="bg-green-600 hover:bg-green-700"
+              >
+                {t('Bulk Actions')}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Search and filters section */}
       <div className="bg-white dark:bg-gray-900 rounded-lg shadow mb-4 p-4">
         <SearchAndFilterBar
@@ -421,6 +499,21 @@ export default function LeaveApplications() {
 
       {/* Content section */}
       <div className="bg-white dark:bg-gray-900 rounded-lg shadow overflow-hidden">
+        {/* Table header with select all checkbox */}
+        <div className="px-4 py-2 border-b border-gray-200 dark:border-gray-700">
+          <div className="flex items-center">
+            <Checkbox
+              checked={selectedLeaveIds.length === (leaveApplications?.data || []).length && selectedLeaveIds.length > 0}
+              onCheckedChange={handleSelectAll}
+              aria-label="Select all"
+              className="mr-2"
+            />
+            <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+              {t('Select All')}
+            </span>
+          </div>
+        </div>
+
         <CrudTable
           columns={columns}
           actions={actions}
@@ -524,6 +617,14 @@ export default function LeaveApplications() {
           onClose={() => setIsApprovalModalOpen(false)}
         />
       )}
+
+      {/* Bulk Approval Modal */}
+      <BulkApprovalModal
+        selectedIds={selectedLeaveIds}
+        isOpen={isBulkApprovalModalOpen}
+        onClose={() => setIsBulkApprovalModalOpen(false)}
+        onSuccess={handleBulkSuccess}
+      />
     </PageTemplate>
   );
 }

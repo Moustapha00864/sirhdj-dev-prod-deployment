@@ -320,4 +320,110 @@ class LeaveApplicationController extends Controller
             return redirect()->back()->with('error', __('Leave application Not Found.'));
         }
     }
+
+    public function bulkApprove(Request $request)
+    {
+        $validated = $request->validate([
+            'leave_application_ids' => 'required|array',
+            'leave_application_ids.*' => 'required|integer|exists:leave_applications,id',
+            'manager_comments' => 'nullable|string',
+        ]);
+
+        $successful = 0;
+        $failed = 0;
+        $errors = [];
+
+        foreach ($validated['leave_application_ids'] as $leaveApplicationId) {
+            try {
+                $leaveApplication = LeaveApplication::where('id', $leaveApplicationId)
+                    ->whereIn('created_by', getCompanyAndUsersId())
+                    ->first();
+
+                if (!$leaveApplication) {
+                    $failed++;
+                    $errors[] = "Leave application #$leaveApplicationId not found";
+                    continue;
+                }
+
+                // Use the approval service which handles all validation and workflow
+                $this->approvalService->approve(
+                    $leaveApplication,
+                    Auth::user(),
+                    $validated['manager_comments'] ?? null
+                );
+
+                $successful++;
+            } catch (\Exception $e) {
+                $failed++;
+                $errors[] = "Leave #$leaveApplicationId: " . $e->getMessage();
+            }
+        }
+
+        // Prepare response message
+        $message = __(':successful leave application(s) approved successfully.', ['successful' => $successful]);
+        if ($failed > 0) {
+            $message .= ' ' . __(':failed failed.', ['failed' => $failed]);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => $message,
+            'successful' => $successful,
+            'failed' => $failed,
+            'errors' => $errors
+        ]);
+    }
+
+    public function bulkReject(Request $request)
+    {
+        $validated = $request->validate([
+            'leave_application_ids' => 'required|array',
+            'leave_application_ids.*' => 'required|integer|exists:leave_applications,id',
+            'manager_comments' => 'nullable|string',
+        ]);
+
+        $successful = 0;
+        $failed = 0;
+        $errors = [];
+
+        foreach ($validated['leave_application_ids'] as $leaveApplicationId) {
+            try {
+                $leaveApplication = LeaveApplication::where('id', $leaveApplicationId)
+                    ->whereIn('created_by', getCompanyAndUsersId())
+                    ->first();
+
+                if (!$leaveApplication) {
+                    $failed++;
+                    $errors[] = "Leave application #$leaveApplicationId not found";
+                    continue;
+                }
+
+                // Use the approval service which handles all validation and workflow
+                $this->approvalService->reject(
+                    $leaveApplication,
+                    Auth::user(),
+                    $validated['manager_comments'] ?? null
+                );
+
+                $successful++;
+            } catch (\Exception $e) {
+                $failed++;
+                $errors[] = "Leave #$leaveApplicationId: " . $e->getMessage();
+            }
+        }
+
+        // Prepare response message
+        $message = __(':successful leave application(s) rejected successfully.', ['successful' => $successful]);
+        if ($failed > 0) {
+            $message .= ' ' . __(':failed failed.', ['failed' => $failed]);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => $message,
+            'successful' => $successful,
+            'failed' => $failed,
+            'errors' => $errors
+        ]);
+    }
 }
